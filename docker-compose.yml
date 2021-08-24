@@ -1,0 +1,41 @@
+version: '3.1'
+
+services:
+  python-service:
+    build: backend/.
+    ports:
+      - 8080:8080
+    secrets:
+      - mongodb_connection_string
+    depends_on:
+      - mongo
+
+  mongo:
+    image: mongo
+    restart: always
+    environment:
+      MONGO_INITDB_ROOT_USERNAME_FILE: /run/secrets/mongodb_user
+      MONGO_INITDB_ROOT_PASSWORD_FILE: /run/secrets/mongodb_password
+    secrets:
+      - mongodb_user
+      - mongodb_password
+
+  mongo-express:
+    image: mongo-express:0.54
+    restart: unless-stopped
+    ports:
+      - 8081:8081
+    environment:
+      ME_CONFIG_MONGODB_ADMINUSERNAME_FILE: /run/secrets/mongodb_user
+      ME_CONFIG_MONGODB_ADMINPASSWORD_FILE: /run/secrets/mongodb_password
+    secrets:
+      - mongodb_user
+      - mongodb_password
+
+secrets:
+  mongodb_user:
+    file: ./secrets/mongodb_user_name.txt
+  mongodb_password:
+    file: ./secrets/mongodb_password.txt
+  mongodb_connection_string:
+    file: ./secrets/mongodb_connection_string.txt

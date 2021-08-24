@@ -1,0 +1,12 @@
+# Application
+fastapi
+uvicorn[standard]
+pydantic[email]
+sec
+
+# Database
+motor
+
+# Development
+black
+flake8
