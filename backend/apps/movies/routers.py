@@ -73,4 +73,7 @@ async def get_movie_poster(id: str, request: Request):
     :param request:
     :return: The poster's URI
     """
-    return {"message": f"Here is the poster for the movie identified by {id}", "path": "www.eatmyshorts.com/poster.png"}
+    return {
+        "message": f"Here is the poster for the movie identified by {id}",
+        "path": "www.eatmyshorts.com/poster.png",
+    }
