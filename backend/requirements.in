@@ -1,6 +1,7 @@
 # Application
 fastapi
 uvicorn[standard]
+gunicorn
 pydantic[email]
 sec
 
