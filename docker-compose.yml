@@ -2,11 +2,17 @@ version: '3.1'
 
 services:
   python-service:
-    build: backend/.
+    build:
+      context: backend/.
+      target: prod
     ports:
       - 8080:8080
+      - 5678:5678
     secrets:
-      - mongodb_connection_string
+      - mongodb_user
+      - mongodb_password
+      - tmdb_v3_token
+      - tmdb_v4_token
     depends_on:
       - mongo
 
@@ -37,5 +43,7 @@ secrets:
     file: ./secrets/mongodb_user_name.txt
   mongodb_password:
     file: ./secrets/mongodb_password.txt
-  mongodb_connection_string:
-    file: ./secrets/mongodb_connection_string.txt
+  tmdb_v3_token:
+    file: ./secrets/tmdb_v3_token.txt
+  tmdb_v4_token:
+    file: ./secrets/tmdb_v4_token.txt

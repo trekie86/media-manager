@@ -1,38 +1,56 @@
-from fastapi import APIRouter, Request
+from fastapi import APIRouter, Request, HTTPException, Body, status
+from fastapi.responses import JSONResponse
+from fastapi.encoders import jsonable_encoder
+
+from .models.movie import Movie, UpdateMovie
 
 router = APIRouter()
 
 
-@router.get("/", summary="Get all of the movies")
+@router.get("/", summary="Get all of the movies", response_model=list[Movie], status_code=status.HTTP_200_OK)
 async def get_movies(request: Request):
     """
     Retrieve all of the movies in the database.
     :return: The list of movies
     """
-    return {"message": "All the movies."}
+    mongodb = request.app.mongodb
+    results = []
+    for doc in await mongodb["movies"].find().to_list(length=1000):
+        results.append(Movie(**doc))
+
+    return results
 
 
-@router.get("/{id}", summary="Get a specific movie")
+@router.get("/{id}", summary="Get a specific movie", response_model=Movie, status_code=status.HTTP_200_OK)
 async def get_movie(id: str, request: Request):
     """
     Retrieve a specific movie.
     :param id: The id of the movie.
     :return: The movie information.
     """
-    return {"message": f"The movie identified by {id}"}
+    doc = await request.app.mongodb["movies"].find_one({"_id": id})
+    if doc is not None:
+        return Movie(**doc)
+
+    raise HTTPException(status_code=404, detail=f"Movie {id} not found")
 
 
-@router.post("/", summary="Add a movie")
-async def add_movie(request: Request):
+@router.post("/", summary="Add a movie", status_code=status.HTTP_201_CREATED)
+async def add_movie(request: Request, movie: Movie = Body(...)):
     """
     Add a movie with the given input.
     :return: The id of the movie.
     """
-    return {"message": "A new id"}
+    movie = jsonable_encoder(movie)
+    new_movie = await request.app.mongodb["movies"].insert_one(movie)
+    created_movie = await request.app.mongodb["movies"].find_one(
+        {"_id": new_movie.inserted_id}
+    )
+    return JSONResponse(content=created_movie["_id"])
 
 
 @router.put("/{id}", summary="Updete a movie")
-async def update_movie(id: str, request: Request):
+async def update_movie(id: str, request: Request, movie: UpdateMovie):
     """
     Update a movie identified by the given id.
     :param id: The id of the movie.
@@ -41,7 +59,7 @@ async def update_movie(id: str, request: Request):
     return {"message": f"The updated movie identified by {id}"}
 
 
-@router.delete("/{id}", summary="Delete a movie")
+@router.delete("/{id}", summary="Delete a movie", status_code=status.HTTP_204_NO_CONTENT)
 async def delete_move(id: str, request: Request):
     """
     Delete the movie identified by the given id.
@@ -49,7 +67,11 @@ async def delete_move(id: str, request: Request):
     :param request:
     :return: A confirmation message if deleted successfully.
     """
-    return {"deleted": True, "message": f"Movie identified by {id} has been deleted."}
+    delete_result = await request.app.mongodb["movies"].delete_one({"_id": id})
+    if delete_result.deleted_count == 1:
+        return
+
+    raise HTTPException(status_code=404, detail=f"Moive {id} not found.")
 
 
 @router.get(
