@@ -1,10 +1,32 @@
+from typing import Optional
+
+import pymongo
 from fastapi import APIRouter, Request, HTTPException, Body, status
 from fastapi.responses import JSONResponse
 from fastapi.encoders import jsonable_encoder
+from motor.motor_asyncio import AsyncIOMotorClient
 
 from .models.movie import Movie, UpdateMovie
+from .. import DBConfigInterface
 
 router = APIRouter()
+
+
+class Config(DBConfigInterface):
+    indexCreated = False
+
+    def setup(self, mongodb: AsyncIOMotorClient) -> None:
+        # TODO: Implement setup method that will configure DB needs (e.g. indices)
+        print("In Movies router setup method")
+        if not self.indexCreated:
+            index_information = await mongodb["movies"].index_information()
+            print(f"Retrieved indices: {index_information}")
+            if "title_index" in index_information.keys():
+                self.indexCreated = True
+            else:
+                # Create the index on title as a TEXT index.
+                print(f"Creating index on title for collection movies")
+                await mongodb["movies"].create_index([("title", pymongo.TEXT)], background=True, name="title_index")
 
 
 @router.get("/", summary="Get all of the movies", response_model=list[Movie], status_code=status.HTTP_200_OK)
@@ -26,6 +48,7 @@ async def get_movie(id: str, request: Request):
     """
     Retrieve a specific movie.
     :param id: The id of the movie.
+    :param request: The request object.
     :return: The movie information.
     """
     doc = await request.app.mongodb["movies"].find_one({"_id": id})
@@ -49,18 +72,28 @@ async def add_movie(request: Request, movie: Movie = Body(...)):
     return JSONResponse(content=created_movie["_id"])
 
 
-@router.put("/{id}", summary="Updete a movie")
-async def update_movie(id: str, request: Request, movie: UpdateMovie):
+@router.put("/{id}", summary="Update a movie", response_model=Movie, status_code=status.HTTP_202_ACCEPTED)
+async def update_movie(id: str, request: Request, movie: UpdateMovie = Body(...)) -> Movie:
     """
     Update a movie identified by the given id.
     :param id: The id of the movie.
-    :return: Return the updated movie object.
+    :param request: The API request object.
+    :param movie: The body of the request.
+    :return: The updated movie.
     """
-    return {"message": f"The updated movie identified by {id}"}
+    movie = jsonable_encoder(movie)
+    result = await request.app.mongodb["movies"].update_one({"_id": id}, {"$set": movie})
+    if result.modified_count == 1:
+        updated_movie = await request.app.mongodb["movies"].find_one(
+            {"_id": id}
+        )
+        return Movie(**updated_movie)
+
+    raise HTTPException(status_code=404, detail=f"Movie {id} was not available to update")
 
 
 @router.delete("/{id}", summary="Delete a movie", status_code=status.HTTP_204_NO_CONTENT)
-async def delete_move(id: str, request: Request):
+async def delete_movie(id: str, request: Request):
     """
     Delete the movie identified by the given id.
     :param id: The id of the movie.
@@ -71,20 +104,29 @@ async def delete_move(id: str, request: Request):
     if delete_result.deleted_count == 1:
         return
 
-    raise HTTPException(status_code=404, detail=f"Moive {id} not found.")
+    raise HTTPException(status_code=404, detail=f"Movie {id} not found.")
 
 
 @router.get(
     "/search",
     summary="Search for a movie the given params, either within the database or via an external movie database.",
 )
-async def movie_search(request: Request):
+async def movie_search(request: Request, q: Optional[str] = None):
     """
     Search for a movie via the given parameters.
-    :param request:
+    :param q: The query parameter, in this case right now it's only the title.
+    :param request: The request object
     :return: The movie object.
     """
-    return {"message": "Movie not found."}
+    if not q:
+        return HTTPException(status_code=400, detail="No search conditions provided.")
+
+    results = await request.app.mongodb["movies"].find({"title": q})
+
+    if results:
+        movie_list = [Movie(**x) for x in results]
+        return movie_list
+    return HTTPException(status_code=404, detail=f"There were no movies found for search parameter of {q}")
 
 
 @router.get("/poster/{id}", summary="Get the URI of the movie poster.")

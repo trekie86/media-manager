@@ -6,9 +6,6 @@ RUN pip3 install -r requirements.txt
 # USER 1000
 COPY . /usr/src/app
 
-ENV ACCESS_LOG=${ACCESS_LOG:-/proc/1/fd/1}
-ENV ERROR_LOG=${ERROR_LOG:-/proc/1/fd/2}
-
 ### Debug Image ###
 FROM base as debug
 RUN pip install ptvsd
@@ -23,6 +20,4 @@ ENTRYPOINT /usr/local/bin/gunicorn \
  -b 0.0.0.0:8080 \
  -w 4 \
  -k uvicorn.workers.UvicornWorker main:app \
- --chdir /usr/src/app \
- --access-logfile "$ACCESS_LOG" \
- --error-logfile "$ERROR_LOG"
+ --chdir /usr/src/app

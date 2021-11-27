@@ -17,6 +17,7 @@ app.include_router(storage_router, tags=["storage"], prefix="/storage")
 async def startup_db_client():
     app.mongodb_client = AsyncIOMotorClient(settings.DB_URL)
     app.mongodb = app.mongodb_client[settings.DB_NAME]
+    movies_router.Config.setup(app.mongodb)
 
 @app.on_event("shutdown")
 async def shutdown_db_client():
