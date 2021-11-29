@@ -8,10 +8,11 @@ COPY . /usr/src/app
 
 ### Debug Image ###
 FROM base as debug
-RUN pip install ptvsd
+#RUN pip install ptvsd
 
 WORKDIR /usr/src/app/
-CMD python -m ptvsd --host 0.0.0.0 --port 5678 --wait --multiprocess -m uvicorn main:app --host 0.0.0.0 --port 8080
+#CMD python -m ptvsd --host 0.0.0.0 --port 5678 --wait --multiprocess -m uvicorn main:app --host 0.0.0.0 --port 8080
+CMD python -m uvicorn main:app --host 0.0.0.0 --port 8080
 
 ### Producton Image ###
 FROM base as prod

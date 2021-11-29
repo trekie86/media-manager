@@ -1,6 +1,19 @@
 from fastapi import APIRouter, Request
+from motor.motor_asyncio import AsyncIOMotorClient
 
 router = APIRouter()
+
+
+class Config:
+    def __init__(self):
+        pass
+
+    def setup(self, mongodb: AsyncIOMotorClient) -> None:
+        # TODO: Setup vinyl db
+        pass
+
+
+router_config = Config()
 
 
 @router.get("/", summary="Get all of the vinyl records")

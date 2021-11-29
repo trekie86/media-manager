@@ -4,7 +4,7 @@ services:
   python-service:
     build:
       context: backend/.
-      target: prod
+      target: debug
     ports:
       - 8080:8080
       - 5678:5678

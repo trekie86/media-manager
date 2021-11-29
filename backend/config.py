@@ -11,7 +11,7 @@ class DatabaseSettings(BaseSettings):
     MONGODB_USER: str = sec.load("mongodb_user")
     MONGODB_PASSWORD: str = sec.load("mongodb_password")
     DB_URL: str = f"mongodb://{MONGODB_USER}:{MONGODB_PASSWORD}@mongo:27017/"
-    DB_NAME: str = 'mediaManager'
+    DB_NAME: str = 'media-manager'
 
 
 class MovieDBSettings(BaseSettings):

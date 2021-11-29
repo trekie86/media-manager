@@ -5,28 +5,33 @@ from fastapi import APIRouter, Request, HTTPException, Body, status
 from fastapi.responses import JSONResponse
 from fastapi.encoders import jsonable_encoder
 from motor.motor_asyncio import AsyncIOMotorClient
+import logging
 
 from .models.movie import Movie, UpdateMovie
-from .. import DBConfigInterface
 
 router = APIRouter()
+log = logging.getLogger(__name__)
 
+class Config:
+    def __init__(self):
+        self.indexCreated = False
 
-class Config(DBConfigInterface):
-    indexCreated = False
-
-    def setup(self, mongodb: AsyncIOMotorClient) -> None:
+    async def setup(self, mongodb: AsyncIOMotorClient) -> None:
         # TODO: Implement setup method that will configure DB needs (e.g. indices)
-        print("In Movies router setup method")
+        log.info("In Movies router setup method")
         if not self.indexCreated:
             index_information = await mongodb["movies"].index_information()
-            print(f"Retrieved indices: {index_information}")
-            if "title_index" in index_information.keys():
-                self.indexCreated = True
-            else:
+            log.info(f"Retrieved indices: {index_information}")
+            if "title_index" not in index_information.keys():
                 # Create the index on title as a TEXT index.
-                print(f"Creating index on title for collection movies")
-                await mongodb["movies"].create_index([("title", pymongo.TEXT)], background=True, name="title_index")
+                log.info(f"Creating index on title for collection movies")
+                await mongodb["movies"].create_index([("title", pymongo.TEXT)],
+                                                                       background=True, name="title_index")
+                log.info(f"Index creation request successfully submitted")
+            self.indexCreated = True
+
+
+router_config = Config()
 
 
 @router.get("/", summary="Get all of the movies", response_model=list[Movie], status_code=status.HTTP_200_OK)
@@ -110,8 +115,9 @@ async def delete_movie(id: str, request: Request):
 @router.get(
     "/search",
     summary="Search for a movie the given params, either within the database or via an external movie database.",
+    status_code=status.HTTP_200_OK
 )
-async def movie_search(request: Request, q: Optional[str] = None):
+async def movie_search(request: Request, q: str = None):
     """
     Search for a movie via the given parameters.
     :param q: The query parameter, in this case right now it's only the title.
@@ -122,7 +128,7 @@ async def movie_search(request: Request, q: Optional[str] = None):
         return HTTPException(status_code=400, detail="No search conditions provided.")
 
     results = await request.app.mongodb["movies"].find({"title": q})
-
+    print(f"results: {results}")
     if results:
         movie_list = [Movie(**x) for x in results]
         return movie_list
