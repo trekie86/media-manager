@@ -1,5 +1,6 @@
 import asyncio
 
+import uvicorn
 from motor.motor_asyncio import AsyncIOMotorClient
 from fastapi import FastAPI, Request, HTTPException
 from fastapi.responses import JSONResponse
@@ -44,3 +45,12 @@ async def get_settings(request: Request):
     else:
         return HTTPException(status_code=403,
                              detail="DEBUG_MODE is set to False, this is only avaiable while set to True")
+
+
+if __name__ == "__main__":
+    uvicorn.run(
+        "main:app",
+        host="0.0.0.0",
+        reload=settings.DEBUG_MODE,
+        port=8000,
+    )

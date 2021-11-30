@@ -112,10 +112,10 @@ async def delete_movie(id: str, request: Request):
     raise HTTPException(status_code=404, detail=f"Movie {id} not found.")
 
 
-@router.get(
-    "/search",
+@router.get("/search/",
     summary="Search for a movie the given params, either within the database or via an external movie database.",
-    status_code=status.HTTP_200_OK
+    status_code=status.HTTP_200_OK,
+    response_model=list[Movie]
 )
 async def movie_search(request: Request, q: str = None):
     """
@@ -124,11 +124,12 @@ async def movie_search(request: Request, q: str = None):
     :param request: The request object
     :return: The movie object.
     """
-    if not q:
-        return HTTPException(status_code=400, detail="No search conditions provided.")
 
-    results = await request.app.mongodb["movies"].find({"title": q})
-    print(f"results: {results}")
+    if not q:
+        raise HTTPException(status_code=400, detail="No search conditions provided.")
+
+    # Using regex for a free-form search and applying the case insensitive option
+    results = await request.app.mongodb["movies"].find({"title": {"$regex": q, "$options": "i"}}).to_list(None)
     if results:
         movie_list = [Movie(**x) for x in results]
         return movie_list
