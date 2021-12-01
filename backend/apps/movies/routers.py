@@ -115,7 +115,19 @@ async def delete_movie(id: str, request: Request):
 @router.get("/search/",
     summary="Search for a movie the given params, either within the database or via an external movie database.",
     status_code=status.HTTP_200_OK,
-    response_model=list[Movie]
+    response_model=list[Movie],
+            responses={"400":
+                           {"description": "Invalid input, missing query parameter",
+                            "content":
+                                {"application/json":
+                                     {"example":
+                                          {"detail": "No search condition provided."}
+                                      }
+                                 }
+                            },
+                       "404":
+                           {"description": "No results found for the given search parameter"}
+                       }
 )
 async def movie_search(request: Request, q: str = None):
     """
@@ -133,7 +145,7 @@ async def movie_search(request: Request, q: str = None):
     if results:
         movie_list = [Movie(**x) for x in results]
         return movie_list
-    return HTTPException(status_code=404, detail=f"There were no movies found for search parameter of {q}")
+    raise HTTPException(status_code=404, detail=f"There were no movies found for search parameter of {q}")
 
 
 @router.get("/poster/{id}", summary="Get the URI of the movie poster.")

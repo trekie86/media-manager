@@ -27,6 +27,8 @@ services:
     secrets:
       - mongodb_user
       - mongodb_password
+    volumes:
+      - dbdata:/data/db
 
   mongo-express:
     image: mongo-express:0.54
@@ -49,3 +51,6 @@ secrets:
     file: ./secrets/tmdb_v3_token.txt
   tmdb_v4_token:
     file: ./secrets/tmdb_v4_token.txt
+
+volumes:
+  dbdata:

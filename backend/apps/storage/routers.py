@@ -8,7 +8,7 @@ class Config:
     def __init__(self):
         pass
 
-    def setup(self, mongodb: AsyncIOMotorClient) -> None:
+    async def setup(self, mongodb: AsyncIOMotorClient) -> None:
         # TODO: Setup storage db
         pass
 
