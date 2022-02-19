@@ -45,6 +45,7 @@ class Format(Enum):
 
 class UpdateMovie(BaseModel):
     """The update movie model that contains all fields except the id."""
+
     title: str
     release_date: date
     genre: List[Genre]
@@ -92,4 +93,3 @@ class Movie(UpdateMovie):
                 "stars": ["Brad Pitt", "Edward Norton"],
             }
         }
-

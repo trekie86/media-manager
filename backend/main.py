@@ -12,6 +12,7 @@ from apps.storage.routers import router as storage_router
 from apps.storage.routers import router_config as storage_router_config
 
 from config import settings
+from database import db
 
 app = FastAPI()
 
@@ -22,17 +23,15 @@ app.include_router(storage_router, tags=["storage"], prefix="/storage")
 
 @app.on_event("startup")
 async def startup_db_client():
-    app.mongodb_client = AsyncIOMotorClient(settings.DB_URL)
-    app.mongodb = app.mongodb_client[settings.DB_NAME]
-    movie_task = asyncio.create_task(movies_router_config.setup(mongodb=app.mongodb))
-    storage_task = asyncio.create_task(storage_router_config.setup(mongodb=app.mongodb))
-    vinyl_task = asyncio.create_task(vinyl_router_config.setup(mongodb=app.mongodb))
+    movie_task = asyncio.create_task(movies_router_config.setup(mongodb=db.mongodb))
+    storage_task = asyncio.create_task(storage_router_config.setup(mongodb=db.mongodb))
+    vinyl_task = asyncio.create_task(vinyl_router_config.setup(mongodb=db.mongodb))
     await asyncio.gather(movie_task, storage_task, vinyl_task)
 
 
 @app.on_event("shutdown")
 async def shutdown_db_client():
-    app.mongodb_client.close()
+    db.mongodb_client.close()
 
 
 @app.get("/config")
@@ -40,8 +39,10 @@ async def get_settings(request: Request):
     if settings.DEBUG_MODE:
         return JSONResponse(status_code=200, content=settings.json())
     else:
-        return HTTPException(status_code=403,
-                             detail="DEBUG_MODE is set to False, this is only avaiable while set to True")
+        return HTTPException(
+            status_code=403,
+            detail="DEBUG_MODE is set to False, this is only avaiable while set to True",
+        )
 
 
 if __name__ == "__main__":

@@ -9,8 +9,11 @@ import logging
 
 from .models.movie import Movie, UpdateMovie
 
+from database import db
+
 router = APIRouter()
 log = logging.getLogger(__name__)
+
 
 class Config:
     def __init__(self):
@@ -25,8 +28,9 @@ class Config:
             if "title_index" not in index_information.keys():
                 # Create the index on title as a TEXT index.
                 log.info(f"Creating index on title for collection movies")
-                await mongodb["movies"].create_index([("title", pymongo.TEXT)],
-                                                                       background=True, name="title_index")
+                await mongodb["movies"].create_index(
+                    [("title", pymongo.TEXT)], background=True, name="title_index"
+                )
                 log.info(f"Index creation request successfully submitted")
             self.indexCreated = True
 
@@ -34,13 +38,18 @@ class Config:
 router_config = Config()
 
 
-@router.get("/", summary="Get all of the movies", response_model=list[Movie], status_code=status.HTTP_200_OK)
+@router.get(
+    "/",
+    summary="Get all of the movies",
+    response_model=list[Movie],
+    status_code=status.HTTP_200_OK,
+)
 async def get_movies(request: Request):
     """
     Retrieve all of the movies in the database.
     :return: The list of movies
     """
-    mongodb = request.app.mongodb
+    mongodb = db.mongodb
     results = []
     for doc in await mongodb["movies"].find().to_list(length=1000):
         results.append(Movie(**doc))
@@ -48,7 +57,12 @@ async def get_movies(request: Request):
     return results
 
 
-@router.get("/{id}", summary="Get a specific movie", response_model=Movie, status_code=status.HTTP_200_OK)
+@router.get(
+    "/{id}",
+    summary="Get a specific movie",
+    response_model=Movie,
+    status_code=status.HTTP_200_OK,
+)
 async def get_movie(id: str, request: Request):
     """
     Retrieve a specific movie.
@@ -56,7 +70,7 @@ async def get_movie(id: str, request: Request):
     :param request: The request object.
     :return: The movie information.
     """
-    doc = await request.app.mongodb["movies"].find_one({"_id": id})
+    doc = await db.mongodb["movies"].find_one({"_id": id})
     if doc is not None:
         return Movie(**doc)
 
@@ -70,15 +84,20 @@ async def add_movie(request: Request, movie: Movie = Body(...)):
     :return: The id of the movie.
     """
     movie = jsonable_encoder(movie)
-    new_movie = await request.app.mongodb["movies"].insert_one(movie)
-    created_movie = await request.app.mongodb["movies"].find_one(
-        {"_id": new_movie.inserted_id}
-    )
+    new_movie = await db.mongodb["movies"].insert_one(movie)
+    created_movie = await db.mongodb["movies"].find_one({"_id": new_movie.inserted_id})
     return JSONResponse(content=created_movie["_id"])
 
 
-@router.put("/{id}", summary="Update a movie", response_model=Movie, status_code=status.HTTP_202_ACCEPTED)
-async def update_movie(id: str, request: Request, movie: UpdateMovie = Body(...)) -> Movie:
+@router.put(
+    "/{id}",
+    summary="Update a movie",
+    response_model=Movie,
+    status_code=status.HTTP_202_ACCEPTED,
+)
+async def update_movie(
+    id: str, request: Request, movie: UpdateMovie = Body(...)
+) -> Movie:
     """
     Update a movie identified by the given id.
     :param id: The id of the movie.
@@ -87,17 +106,19 @@ async def update_movie(id: str, request: Request, movie: UpdateMovie = Body(...)
     :return: The updated movie.
     """
     movie = jsonable_encoder(movie)
-    result = await request.app.mongodb["movies"].update_one({"_id": id}, {"$set": movie})
+    result = await db.mongodb["movies"].update_one({"_id": id}, {"$set": movie})
     if result.modified_count == 1:
-        updated_movie = await request.app.mongodb["movies"].find_one(
-            {"_id": id}
-        )
+        updated_movie = await db.mongodb["movies"].find_one({"_id": id})
         return Movie(**updated_movie)
 
-    raise HTTPException(status_code=404, detail=f"Movie {id} was not available to update")
+    raise HTTPException(
+        status_code=404, detail=f"Movie {id} was not available to update"
+    )
 
 
-@router.delete("/{id}", summary="Delete a movie", status_code=status.HTTP_204_NO_CONTENT)
+@router.delete(
+    "/{id}", summary="Delete a movie", status_code=status.HTTP_204_NO_CONTENT
+)
 async def delete_movie(id: str, request: Request):
     """
     Delete the movie identified by the given id.
@@ -105,29 +126,29 @@ async def delete_movie(id: str, request: Request):
     :param request:
     :return: A confirmation message if deleted successfully.
     """
-    delete_result = await request.app.mongodb["movies"].delete_one({"_id": id})
+    delete_result = await db.mongodb["movies"].delete_one({"_id": id})
     if delete_result.deleted_count == 1:
         return
 
     raise HTTPException(status_code=404, detail=f"Movie {id} not found.")
 
 
-@router.get("/search/",
+@router.get(
+    "/search/",
     summary="Search for a movie the given params, either within the database or via an external movie database.",
     status_code=status.HTTP_200_OK,
     response_model=list[Movie],
-            responses={"400":
-                           {"description": "Invalid input, missing query parameter",
-                            "content":
-                                {"application/json":
-                                     {"example":
-                                          {"detail": "No search condition provided."}
-                                      }
-                                 }
-                            },
-                       "404":
-                           {"description": "No results found for the given search parameter"}
-                       }
+    responses={
+        "400": {
+            "description": "Invalid input, missing query parameter",
+            "content": {
+                "application/json": {
+                    "example": {"detail": "No search condition provided."}
+                }
+            },
+        },
+        "404": {"description": "No results found for the given search parameter"},
+    },
 )
 async def movie_search(request: Request, q: str = None):
     """
@@ -141,11 +162,18 @@ async def movie_search(request: Request, q: str = None):
         raise HTTPException(status_code=400, detail="No search conditions provided.")
 
     # Using regex for a free-form search and applying the case insensitive option
-    results = await request.app.mongodb["movies"].find({"title": {"$regex": q, "$options": "i"}}).to_list(None)
+    results = (
+        await db.mongodb["movies"]
+        .find({"title": {"$regex": q, "$options": "i"}})
+        .to_list(None)
+    )
     if results:
         movie_list = [Movie(**x) for x in results]
         return movie_list
-    raise HTTPException(status_code=404, detail=f"There were no movies found for search parameter of {q}")
+    raise HTTPException(
+        status_code=404,
+        detail=f"There were no movies found for search parameter of {q}",
+    )
 
 
 @router.get("/poster/{id}", summary="Get the URI of the movie poster.")
