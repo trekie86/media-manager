@@ -1,7 +1,8 @@
 import asyncio
+import logging
+from os import environ
 
 import uvicorn
-from motor.motor_asyncio import AsyncIOMotorClient
 from fastapi import FastAPI, Request, HTTPException
 from fastapi.responses import JSONResponse
 from apps.movies.routers import router as movies_router
@@ -13,6 +14,10 @@ from apps.storage.routers import router_config as storage_router_config
 
 from config import settings
 from database import db
+
+
+logging.basicConfig(filename="/logs/application.log", encoding='utf-8', level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
+log = logging.getLogger(__name__)
 
 app = FastAPI()
 
@@ -35,10 +40,11 @@ async def shutdown_db_client():
 
 
 @app.get("/config")
-async def get_settings(request: Request):
+async def get_settings():
     if settings.DEBUG_MODE:
         return JSONResponse(status_code=200, content=settings.json())
     else:
+        log.warning("Attempt to access configuration settings has been rejected.")
         return HTTPException(
             status_code=403,
             detail="DEBUG_MODE is set to False, this is only avaiable while set to True",

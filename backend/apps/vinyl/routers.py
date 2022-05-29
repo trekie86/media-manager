@@ -1,10 +1,11 @@
 from fastapi import APIRouter, Request
 from motor.motor_asyncio import AsyncIOMotorClient
 
+from apps.setup import Setup
+
 router = APIRouter()
 
-
-class Config:
+class Config(Setup):
     def __init__(self):
         pass
 

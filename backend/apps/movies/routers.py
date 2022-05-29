@@ -1,11 +1,11 @@
-from typing import Optional
-
 import pymongo
 from fastapi import APIRouter, Request, HTTPException, Body, status
-from fastapi.responses import JSONResponse
+from fastapi.responses import JSONResponse, Response
 from fastapi.encoders import jsonable_encoder
 from motor.motor_asyncio import AsyncIOMotorClient
 import logging
+
+from apps.setup import Setup
 
 from .models.movie import Movie, UpdateMovie
 
@@ -14,8 +14,7 @@ from database import db
 router = APIRouter()
 log = logging.getLogger(__name__)
 
-
-class Config:
+class Config(Setup):
     def __init__(self):
         self.indexCreated = False
 
@@ -28,9 +27,7 @@ class Config:
             if "title_index" not in index_information.keys():
                 # Create the index on title as a TEXT index.
                 log.info(f"Creating index on title for collection movies")
-                await mongodb["movies"].create_index(
-                    [("title", pymongo.TEXT)], background=True, name="title_index"
-                )
+                await mongodb["movies"].create_index("title", name="title_index")
                 log.info(f"Index creation request successfully submitted")
             self.indexCreated = True
 
@@ -44,16 +41,18 @@ router_config = Config()
     response_model=list[Movie],
     status_code=status.HTTP_200_OK,
 )
-async def get_movies(request: Request):
+async def get_movies(request: Request, response: Response, pageToken: int = 0, pageSize: int = 100):
     """
     Retrieve all of the movies in the database.
     :return: The list of movies
     """
     mongodb = db.mongodb
     results = []
-    for doc in await mongodb["movies"].find().to_list(length=1000):
+    for doc in await mongodb["movies"].find().skip(pageToken).to_list(length=pageSize):
         results.append(Movie(**doc))
-
+    if (len(results) == pageSize):
+        # If the number of results is the same as the page size, add the last page token for future fetching
+        response.headers["X-lastPageToken"] = str(pageToken + len(results))
     return results
 
 
@@ -150,7 +149,7 @@ async def delete_movie(id: str, request: Request):
         "404": {"description": "No results found for the given search parameter"},
     },
 )
-async def movie_search(request: Request, q: str = None):
+async def movie_search(request: Request, q: str):
     """
     Search for a movie via the given parameters.
     :param q: The query parameter, in this case right now it's only the title.
