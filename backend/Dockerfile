@@ -6,6 +6,7 @@ RUN pip3 install -r requirements.txt
 # USER 1000
 COPY . /usr/src/app
 
+RUN useradd -ms /bin/bash media-manager-daemon
 ### Debug Image ###
 FROM base as debug
 #RUN pip install ptvsd
@@ -22,3 +23,5 @@ ENTRYPOINT /usr/local/bin/gunicorn \
  -w 4 \
  -k uvicorn.workers.UvicornWorker main:app \
  --chdir /usr/src/app
+
+ USER media-manager-daemon
