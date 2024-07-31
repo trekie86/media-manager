@@ -5,6 +5,8 @@ gunicorn
 pydantic[email]
 sec
 
+# PyYAML==6.0.1
+
 # Database
 motor
 
