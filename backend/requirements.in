@@ -3,6 +3,7 @@ fastapi
 uvicorn[standard]
 gunicorn
 pydantic[email]
+pydantic-settings
 sec
 
 # PyYAML==6.0.1

@@ -5,6 +5,7 @@ from apps.setup import Setup
 
 router = APIRouter()
 
+
 class Config(Setup):
     def __init__(self):
         pass

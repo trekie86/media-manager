@@ -83,8 +83,11 @@ pydantic[email]==2.8.2
     # via
     #   -r requirements.in
     #   fastapi
+    #   pydantic-settings
 pydantic-core==2.20.1
     # via pydantic
+pydantic-settings==2.4.0
+    # via -r requirements.in
 pyflakes==3.2.0
     # via flake8
 pygments==2.18.0
@@ -92,7 +95,9 @@ pygments==2.18.0
 pymongo==4.8.0
     # via motor
 python-dotenv==1.0.1
-    # via uvicorn
+    # via
+    #   pydantic-settings
+    #   uvicorn
 python-multipart==0.0.9
     # via fastapi
 pyyaml==6.0.1

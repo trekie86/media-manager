@@ -1,7 +1,7 @@
 import os
 
 import sec
-from pydantic import BaseSettings
+from pydantic_settings import BaseSettings
 
 
 class CommonSettings(BaseSettings):
@@ -12,7 +12,7 @@ class CommonSettings(BaseSettings):
 class DatabaseSettings(BaseSettings):
     MONGODB_USER: str = str(sec.load("mongodb_user"))
     MONGODB_PASSWORD: str = str(sec.load("mongodb_password"))
-    DB_HOST = "localhost" if os.getenv("PYCHARM_HOSTED") else "mongo"
+    DB_HOST: str = "localhost" if os.getenv("PYCHARM_HOSTED") else "mongo"
     DB_URL: str = f"mongodb://{MONGODB_USER}:{MONGODB_PASSWORD}@{DB_HOST}:27017/"
     DB_NAME: str = "media-manager"
 
