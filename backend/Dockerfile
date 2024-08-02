@@ -6,7 +6,9 @@ RUN pip3 install -r requirements.txt
 # USER 1000
 COPY . /usr/src/app
 
+RUN mkdir -p /logs
 RUN useradd -ms /bin/bash media-manager-daemon
+RUN chown media-manager-daemon /logs
 ### Debug Image ###
 FROM base as debug
 #RUN pip install ptvsd

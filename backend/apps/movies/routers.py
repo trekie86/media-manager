@@ -14,6 +14,7 @@ from database import db
 router = APIRouter()
 log = logging.getLogger(__name__)
 
+
 class Config(Setup):
     def __init__(self):
         self.indexCreated = False
@@ -41,7 +42,9 @@ router_config = Config()
     response_model=list[Movie],
     status_code=status.HTTP_200_OK,
 )
-async def get_movies(request: Request, response: Response, pageToken: int = 0, pageSize: int = 100):
+async def get_movies(
+    request: Request, response: Response, pageToken: int = 0, pageSize: int = 100
+):
     """
     Retrieve all of the movies in the database.
     :return: The list of movies
@@ -50,7 +53,7 @@ async def get_movies(request: Request, response: Response, pageToken: int = 0, p
     results = []
     for doc in await mongodb["movies"].find().skip(pageToken).to_list(length=pageSize):
         results.append(Movie(**doc))
-    if (len(results) == pageSize):
+    if len(results) == pageSize:
         # If the number of results is the same as the page size, add the last page token for future fetching
         response.headers["X-lastPageToken"] = str(pageToken + len(results))
     return results
