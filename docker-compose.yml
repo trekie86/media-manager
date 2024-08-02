@@ -13,6 +13,8 @@ services:
       - tmdb_v4_token
     volumes:
       - ./logs:/logs
+    depends_on:
+      - mongo
 
   mongo:
     build:
@@ -34,6 +36,8 @@ services:
     image: mongo-express
     container_name: mongo-express
     restart: unless-stopped
+    depends_on:
+      - mongo
     ports:
       - 8081:8081
     environment:
