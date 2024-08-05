@@ -58,8 +58,8 @@ class UpdateMovie(BaseModel):
     format: Format
 
     class Config:
-        allow_population_by_field_name = True
-        schema_extra = {
+        populate_by_name = True
+        json_schema_extra = {
             "example": {
                 "title": "Fight Club",
                 "genre": ["Drama"],
@@ -79,8 +79,8 @@ class Movie(UpdateMovie):
     id: str = Field(default_factory=uuid.uuid4, alias="_id")
 
     class Config:
-        allow_population_by_field_name = True
-        schema_extra = {
+        populate_by_name = True
+        json_schema_extra = {
             "example": {
                 "id": "87f0358d-00b1-499f-b8ee-19009eaa0241",
                 "title": "Fight Club",
