@@ -88,7 +88,9 @@ async def add_movie(request: Request, movie: Movie = Body(...)):
     movie = jsonable_encoder(movie)
     new_movie = await db.mongodb["movies"].insert_one(movie)
     created_movie = await db.mongodb["movies"].find_one({"_id": new_movie.inserted_id})
-    return JSONResponse(content=created_movie["_id"])
+    return JSONResponse(
+        status_code=status.HTTP_201_CREATED, content=created_movie["_id"]
+    )
 
 
 @router.put(
