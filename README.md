@@ -25,63 +25,114 @@ A web application to manage your physical media collection and track storage loc
 - Node.js 20 or higher
 - uv (Python package installer)
 
+### Quick Start
+
+1. Clone the repository
+2. Copy environment file: `cp .env.example .env`
+3. Update environment variables in `.env`
+4. Start required services:
+   - **Full Docker Setup**: Run `docker compose up -d` (runs everything in containers)
+   - **Local Development**: Run `docker compose up -d mongodb mongo-express` (provides required MongoDB instance)
+
+Note: Local development requires MongoDB. The easiest way to provide this is by running the MongoDB container from the docker-compose configuration. If you prefer to use your own MongoDB instance, update the connection details in `.env`.
+
 ### Backend Setup
 
 #### Using Virtual Environment (Local Development)
 
-Unix/macOS:
-```bash
-# Navigate to backend directory
-cd backend
+Prerequisites:
+- Ensure MongoDB is running (either through Docker or your own instance)
+- If using Docker: `docker compose up -d mongodb mongo-express`
 
-# Run setup script
-./scripts/setup_dev.sh
-```
+1. Navigate to backend directory:
+   ```bash
+   cd backend
+   ```
 
-Windows:
-```powershell
-# Navigate to backend directory
-cd backend
+2. Run setup script:
+   - Unix/macOS:
+     ```bash
+     ./scripts/setup_dev.sh
+     ```
+   - Windows:
+     ```powershell
+     .\scripts\setup_dev.ps1
+     ```
 
-# Run setup script
-.\scripts\setup_dev.ps1
-```
+   The setup scripts will:
+   - Install uv if not present
+   - Create and activate a virtual environment
+   - Generate requirements.txt from requirements.in
+   - Install all development dependencies
 
-The setup scripts will:
-1. Install uv if not present
-2. Create and activate a virtual environment
-3. Generate requirements.txt from requirements.in
-4. Install all development dependencies
+3. Start the development server:
+   ```bash
+   uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
+   ```
 
-To activate the virtual environment in new terminals:
-- Unix/macOS: `source .venv/bin/activate`
-- Windows: `.\.venv\Scripts\Activate.ps1`
+4. Access the API:
+   - API Endpoints: http://localhost:8000
+   - Interactive API Documentation (Swagger UI): http://localhost:8000/docs
+   - Alternative API Documentation (ReDoc): http://localhost:8000/redoc
+
+Notes:
+- To activate the virtual environment in new terminals:
+  - Unix/macOS: `source .venv/bin/activate`
+  - Windows: `.\.venv\Scripts\Activate.ps1`
+- The `--reload` flag enables hot-reload during development
+- The server will restart automatically when you make changes
 
 ### Frontend Setup
 
-```bash
-# Navigate to frontend directory
-cd frontend
+1. Navigate to frontend directory:
+   ```bash
+   cd frontend
+   ```
 
-# Install dependencies
-pnpm install
+2. Install dependencies:
+   ```bash
+   pnpm install
+   ```
 
-# Start development server
-pnpm dev
-```
+3. Start development server:
+   ```bash
+   pnpm dev
+   ```
+
+4. Access the frontend:
+   - Open http://localhost:3000 in your browser
+   - Changes will hot-reload automatically
 
 ### Docker Setup (Full Stack)
 
-```bash
-# Start all services
-docker compose up -d
+1. Start all services:
+   ```bash
+   # Build and start containers
+   docker compose up -d
 
-# View logs
-docker compose logs -f
+   # View logs (optional)
+   docker compose logs -f
+   ```
 
-# Stop all services
-docker compose down
-```
+2. Access services:
+   - Frontend: http://localhost:3000
+   - Backend API: http://localhost:8000
+   - API Documentation: http://localhost:8000/docs
+   - MongoDB Express: http://localhost:8081
+
+3. Stop services:
+   ```bash
+   # Stop containers
+   docker compose down
+
+   # Stop and remove volumes (if needed)
+   docker compose down -v
+   ```
+
+Notes:
+- First startup may take a few minutes to build containers
+- MongoDB data persists between restarts unless you use `-v`
+- Use `docker compose ps` to check container status
 
 ## Available Services
 
