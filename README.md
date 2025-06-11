@@ -28,13 +28,35 @@ A web application to manage your physical media collection and track storage loc
 ### Quick Start
 
 1. Clone the repository
-2. Copy environment file: `cp .env.example .env`
-3. Update environment variables in `.env`
-4. Start required services:
+2. Copy and configure environment variables:
+   ```bash
+   cp .env.example .env
+   # Edit .env with your settings
+   ```
+   Note: The setup script will automatically copy this .env file to the backend directory.
+   If you update the .env file later, either:
+   - Copy it manually to the backend folder
+   - Or run the setup script again
+
+3. Start required services:
    - **Full Docker Setup**: Run `docker compose up -d` (runs everything in containers)
    - **Local Development**: Run `docker compose up -d mongodb mongo-express` (provides required MongoDB instance)
 
-Note: Local development requires MongoDB. The easiest way to provide this is by running the MongoDB container from the docker-compose configuration. If you prefer to use your own MongoDB instance, update the connection details in `.env`.
+Note: Local development requires MongoDB. The easiest way to provide this is by running the MongoDB container from the docker-compose configuration. When running the backend locally, you need to use different MongoDB connection settings:
+
+For local backend development:
+```bash
+# In .env
+MONGO_HOST=localhost  # Use localhost when running backend locally
+```
+
+For Docker development:
+```bash
+# In .env
+MONGO_HOST=mongodb   # Use container name when running in Docker
+```
+
+If you prefer to use your own MongoDB instance, update all the connection details in `.env` accordingly.
 
 ### Backend Setup
 
@@ -43,13 +65,14 @@ Note: Local development requires MongoDB. The easiest way to provide this is by 
 Prerequisites:
 - Ensure MongoDB is running (either through Docker or your own instance)
 - If using Docker: `docker compose up -d mongodb mongo-express`
+- Ensure you have configured .env file in the root directory
 
 1. Navigate to backend directory:
    ```bash
    cd backend
    ```
 
-2. Run setup script:
+2. Run setup script to create virtual environment and install dependencies:
    - Unix/macOS:
      ```bash
      ./scripts/setup_dev.sh
@@ -61,26 +84,40 @@ Prerequisites:
 
    The setup scripts will:
    - Install uv if not present
-   - Create and activate a virtual environment
+   - Create virtual environment
    - Generate requirements.txt from requirements.in
    - Install all development dependencies
 
-3. Start the development server:
+3. Activate the virtual environment:
    ```bash
-   uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
+   # On Unix/macOS:
+   source .venv/bin/activate
+   
+   # On Windows:
+   .\.venv\Scripts\Activate.ps1
+   ```
+   
+   You should see your prompt change to indicate the virtual environment is active.
+
+4. Start the development server:
+   ```bash
+   # Make sure your virtual environment is activated first
+   python -m uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
    ```
 
-4. Access the API:
+5. Access the API:
    - API Endpoints: http://localhost:8000
    - Interactive API Documentation (Swagger UI): http://localhost:8000/docs
    - Alternative API Documentation (ReDoc): http://localhost:8000/redoc
 
 Notes:
-- To activate the virtual environment in new terminals:
-  - Unix/macOS: `source .venv/bin/activate`
-  - Windows: `.\.venv\Scripts\Activate.ps1`
+- The virtual environment must be activated in each new terminal window you open
 - The `--reload` flag enables hot-reload during development
 - The server will restart automatically when you make changes
+- To deactivate the virtual environment when done:
+  ```bash
+  deactivate
+  ```
 
 ### Frontend Setup
 

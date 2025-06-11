@@ -41,8 +41,10 @@ services:
       - ./docker/development/mongo-init.js:/docker-entrypoint-initdb.d/mongo-init.js:ro
     environment:
       - MONGO_INITDB_DATABASE=${MONGO_DB:-media_manager}
-      - MONGO_INITDB_ROOT_USERNAME=${MONGO_USER:-admin}
-      - MONGO_INITDB_ROOT_PASSWORD=${MONGO_PASSWORD:-change_me_in_production}
+      - MONGO_INITDB_ROOT_USERNAME=${MONGO_ROOT_USER:-admin}
+      - MONGO_INITDB_ROOT_PASSWORD=${MONGO_ROOT_PASSWORD:-change_me_in_production}
+      - MONGO_APP_USERNAME=${MONGO_USER:-app_user}
+      - MONGO_APP_PASSWORD=${MONGO_PASSWORD:-app_password}
 
   mongo-express:
     image: mongo-express:latest
@@ -53,8 +55,8 @@ services:
       - ME_CONFIG_MONGODB_PORT=27017
       - ME_CONFIG_MONGODB_ENABLE_ADMIN=true
       - ME_CONFIG_MONGODB_AUTH_DATABASE=admin
-      - ME_CONFIG_MONGODB_AUTH_USERNAME=${MONGO_USER:-admin}
-      - ME_CONFIG_MONGODB_AUTH_PASSWORD=${MONGO_PASSWORD:-change_me_in_production}
+      - ME_CONFIG_MONGODB_AUTH_USERNAME=${MONGO_ROOT_USER:-admin}
+      - ME_CONFIG_MONGODB_AUTH_PASSWORD=${MONGO_ROOT_PASSWORD:-change_me_in_production}
       - ME_CONFIG_BASICAUTH_USERNAME=${ME_CONFIG_BASICAUTH_USERNAME:-admin}
       - ME_CONFIG_BASICAUTH_PASSWORD=${ME_CONFIG_BASICAUTH_PASSWORD:-change_me_in_production}
     depends_on:

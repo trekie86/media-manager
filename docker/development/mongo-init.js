@@ -97,3 +97,18 @@ db.movies.createIndex({ "tmdb_id": 1 }, { unique: true, sparse: true });
 db.bins.createIndex({ "name": 1 }, { unique: true });
 db.users.createIndex({ "username": 1 }, { unique: true });
 db.users.createIndex({ "email": 1 }, { unique: true, sparse: true });
+
+// Create application user with credentials from environment variables
+const appUsername = process.env.MONGO_APP_USERNAME || 'app_user';
+const appPassword = process.env.MONGO_APP_PASSWORD || 'app_password';
+
+db.createUser({
+  user: appUsername,
+  pwd: appPassword,
+  roles: [
+    {
+      role: 'readWrite',
+      db: 'media_manager'
+    }
+  ]
+});

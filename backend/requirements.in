@@ -14,9 +14,6 @@ python-multipart>=0.0.6
 # Environment variables
 python-dotenv>=1.0.0
 
-# CORS
-CORSMiddleware>=0.1.2
-
 # API Client for TMDB
 httpx>=0.25.1
 
