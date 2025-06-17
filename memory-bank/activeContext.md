@@ -1,12 +1,27 @@
 # Active Context
 
 ## Current Focus
-Storage model update is complete and ready for deployment. The project has:
+Phase 2A testing framework implementation is underway. The project has:
 - Complete development environment with proper security
 - Docker configuration with separate admin and application users
 - Updated storage model with hierarchical structure
-- Migration scripts and updated database initialization
-- Ready for deployment and testing
+- Initial testing framework setup with pytest
+- First model tests implemented with full coverage
+
+## Recent Changes
+1. Testing Framework Setup:
+   - Configured pytest with custom markers and settings
+   - Implemented core test fixtures in conftest.py
+   - Created test directory structure
+   - Added environment-specific configuration
+   - Set up test database handling
+
+2. Movie Model Tests:
+   - Implemented comprehensive validation tests
+   - Added MediaFormat enum testing
+   - Created reusable test fixtures
+   - Achieved 100% coverage for movie.py
+   - Established patterns for model testing
 
 ## Recent Changes
 1. Storage Model Update:
@@ -81,16 +96,16 @@ Storage model update is complete and ready for deployment. The project has:
 
 ## Next Steps Context
 1. Immediate Tasks:
-   - Deploy storage model changes
-   - Run and verify migration
-   - Test tree operations
-   - Document deployment process
+   - Implement Storage model tests
+   - Add User model tests
+   - Set up integration test infrastructure
+   - Create API test helpers
 
-2. Phase 2A Preparation:
-   - Set up testing framework
+2. Phase 2A Implementation:
+   - Continue TDD approach for remaining models
    - Implement authentication system
    - Create storage management endpoints
-   - Add comprehensive tests
+   - Add API integration tests
 
 ## Project Insights
 1. Technical Decisions:

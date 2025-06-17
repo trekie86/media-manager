@@ -1,6 +1,8 @@
 """
 Application configuration and settings.
 """
+import os
+from functools import lru_cache
 from typing import List, Union
 
 from pydantic import field_validator
@@ -69,5 +71,26 @@ class Settings(BaseSettings):
         )
 
 
-# Create global settings instance
-settings = Settings()
+# Settings instance factory
+@lru_cache
+def get_settings() -> Settings:
+    """
+    Create cached settings instance based on environment.
+    For testing, override settings with test-specific values.
+    """
+    env = os.getenv("ENVIRONMENT", "development")
+    settings = Settings()
+    
+    if env == "test":
+        # Override settings for test environment
+        settings.MONGO_HOST = "localhost"
+        settings.MONGO_USER = "test"
+        settings.MONGO_PASSWORD = "test"
+        settings.MONGO_DB = "media_manager_test"
+        settings.TMDB_API_KEY = "test_key"
+    
+    return settings
+
+
+# Create global settings instance for non-test environments
+settings = get_settings()

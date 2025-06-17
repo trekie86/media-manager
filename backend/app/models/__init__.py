@@ -10,12 +10,13 @@ from .movie import (
     MovieInDB,
     MovieResponse
 )
-from .bin import (
-    BinBase,
-    BinCreate,
-    BinUpdate,
-    BinInDB,
-    BinResponse
+from .storage import (
+    StorageType,
+    StorageBase,
+    StorageCreate,
+    StorageUpdate,
+    StorageInDB,
+    StorageResponse
 )
 from .user import (
     UserBase,
@@ -35,12 +36,13 @@ __all__ = [
     "MovieUpdate",
     "MovieInDB",
     "MovieResponse",
-    # Bins
-    "BinBase",
-    "BinCreate",
-    "BinUpdate",
-    "BinInDB",
-    "BinResponse",
+    # Storage
+    "StorageType",
+    "StorageBase",
+    "StorageCreate",
+    "StorageUpdate",
+    "StorageInDB",
+    "StorageResponse",
     # Users
     "UserBase",
     "UserCreate",

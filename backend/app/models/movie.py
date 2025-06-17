@@ -23,11 +23,11 @@ class MovieBase(MongoModel):
     Base movie model with shared attributes.
     """
     title: str = Field(..., description="Movie title")
-    year: int = Field(..., description="Release year")
+    year: int = Field(..., description="Release year", ge=1900, le=2100)
     format: MediaFormat = Field(..., description="Physical media format")
     tmdb_id: Optional[int] = Field(None, description="TMDB movie ID")
     genre: Optional[List[str]] = Field(default=None, description="List of genres")
-    runtime: Optional[int] = Field(None, description="Movie runtime in minutes")
+    runtime: Optional[int] = Field(None, description="Movie runtime in minutes", ge=0)
     cover_image: Optional[str] = Field(None, description="URL to cover image")
 
 
