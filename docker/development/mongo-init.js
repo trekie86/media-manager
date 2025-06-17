@@ -6,7 +6,7 @@ db.createCollection('movies', {
   validator: {
     $jsonSchema: {
       bsonType: 'object',
-      required: ['title', 'year', 'bin_id', 'format'],
+      required: ['title', 'year', 'storage_id', 'format'],
       properties: {
         title: {
           bsonType: 'string',
@@ -16,9 +16,9 @@ db.createCollection('movies', {
           bsonType: 'int',
           description: 'Release year - required'
         },
-        bin_id: {
+        storage_id: {
           bsonType: 'objectId',
-          description: 'Reference to storage bin - required'
+          description: 'Reference to storage location - required'
         },
         format: {
           enum: ['DVD', 'Blu-ray', 'Digital'],
@@ -48,19 +48,55 @@ db.createCollection('movies', {
   }
 });
 
-db.createCollection('bins', {
+db.createCollection('storage', {
   validator: {
     $jsonSchema: {
       bsonType: 'object',
-      required: ['name'],
+      required: ['name', 'type'],
       properties: {
         name: {
           bsonType: 'string',
-          description: 'Bin name - required'
+          description: 'Storage location name - required'
         },
         description: {
           bsonType: 'string',
-          description: 'Bin description'
+          description: 'Storage location description'
+        },
+        type: {
+          enum: ['cabinet', 'shelf', 'bin', 'drawer'],
+          description: 'Type of storage location - required'
+        },
+        parent_id: {
+          bsonType: ['objectId', 'null'],
+          description: 'Reference to parent storage location'
+        },
+        path: {
+          bsonType: 'array',
+          items: {
+            bsonType: 'objectId'
+          },
+          description: 'Materialized path of ancestor IDs'
+        },
+        metadata: {
+          bsonType: 'object',
+          properties: {
+            capacity: {
+              bsonType: ['int', 'null'],
+              description: 'Storage capacity'
+            },
+            dimensions: {
+              bsonType: ['string', 'null'],
+              description: 'Physical dimensions'
+            },
+            location: {
+              bsonType: ['string', 'null'],
+              description: 'Physical location or coordinates'
+            },
+            custom: {
+              bsonType: 'object',
+              description: 'Custom metadata fields'
+            }
+          }
         }
       }
     }
@@ -92,9 +128,17 @@ db.createCollection('users', {
 
 // Create indexes
 db.movies.createIndex({ "title": 1 });
-db.movies.createIndex({ "bin_id": 1 });
+db.movies.createIndex({ "storage_id": 1 });
 db.movies.createIndex({ "tmdb_id": 1 }, { unique: true, sparse: true });
-db.bins.createIndex({ "name": 1 }, { unique: true });
+
+// Storage indexes for tree operations
+db.storage.createIndex({ "name": 1 }, { unique: true });
+db.storage.createIndex({ "parent_id": 1 });
+db.storage.createIndex({ "path": 1 });
+db.storage.createIndex({ "type": 1 });
+db.storage.createIndex({ "parent_id": 1, "type": 1 });
+db.storage.createIndex({ "path": 1, "type": 1 });
+
 db.users.createIndex({ "username": 1 }, { unique: true });
 db.users.createIndex({ "email": 1 }, { unique: true, sparse: true });
 

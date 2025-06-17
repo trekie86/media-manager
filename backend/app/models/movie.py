@@ -35,7 +35,10 @@ class MovieCreate(MovieBase):
     """
     Model for creating a new movie.
     """
-    bin_id: str = Field(..., description="ID of the storage bin")
+    storage_id: str = Field(
+        ...,
+        description="ID of the storage location (cabinet, shelf, bin, etc.)"
+    )
 
 
 class MovieUpdate(MongoModel):
@@ -45,7 +48,10 @@ class MovieUpdate(MongoModel):
     title: Optional[str] = None
     year: Optional[int] = None
     format: Optional[MediaFormat] = None
-    bin_id: Optional[str] = None
+    storage_id: Optional[str] = Field(
+        None,
+        description="ID of the storage location (cabinet, shelf, bin, etc.)"
+    )
     tmdb_id: Optional[int] = None
     genre: Optional[List[str]] = None
     runtime: Optional[int] = None
@@ -56,7 +62,10 @@ class MovieInDB(MovieBase):
     """
     Model for movie as stored in database.
     """
-    bin_id: str = Field(..., description="ID of the storage bin")
+    storage_id: str = Field(
+        ...,
+        description="ID of the storage location (cabinet, shelf, bin, etc.)"
+    )
 
 
 class MovieResponse(MovieInDB):
