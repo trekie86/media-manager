@@ -85,19 +85,19 @@
   - [ ] Search functionality tests
 
 ### Storage Management
-- [ ] Storage routes
-  - [ ] Create storage endpoint
-  - [ ] List storage endpoint
-  - [ ] Update storage endpoint
-  - [ ] Delete storage endpoint
-  - [ ] Move storage endpoint
-  - [ ] Get tree endpoint
-- [ ] Storage service layer
-- [ ] Storage repository implementation
-- [ ] Test suites
-  - [ ] CRUD operation tests
-  - [ ] Tree operation tests
-  - [ ] Validation tests
+- [x] Storage routes
+  - [x] Create storage endpoint
+  - [x] List storage endpoint
+  - [x] Update storage endpoint
+  - [x] Delete storage endpoint
+  - [x] Move storage endpoint (via update endpoint)
+  - [x] Get tree endpoint
+- [x] Storage service layer (implemented in API routes)
+- [x] Storage repository implementation (using MongoDB directly)
+- [x] Test suites
+  - [x] CRUD operation tests
+  - [x] Tree operation tests
+  - [x] Validation tests
   - [ ] Performance tests
 
 ### API Documentation
@@ -130,13 +130,14 @@
 - [ ] E2E tests
 
 ## Current Challenges/Decisions
-- MongoDB needs to be running for tests
-- Need to verify database connection in tests
-- Auth route implementation pending
-- Test infrastructure in place but needs database
+- MongoDB schema validation requires careful type handling
+- Need to implement movie management endpoints
+- TMDB API integration needed
+- API documentation needs to be completed
 
 ## Notes for Next Session
-- Start MongoDB service
-- Verify database connection
-- Complete auth route implementation
-- Run and fix failing tests
+- Start implementing movie management endpoints
+- Add TMDB API integration
+- Implement search functionality
+- Complete API documentation
+- Consider adding performance tests for storage operations

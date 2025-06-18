@@ -259,6 +259,9 @@ sequenceDiagram
    - Schema validation
    - Index optimization
    - Tree structure queries
+   - ObjectId/String ID conversion patterns
+   - Response formatting for MongoDB documents
+   - Explicit field mapping for consistent API
 
 3. Frontend-Backend Integration
    - REST API
@@ -283,6 +286,38 @@ sequenceDiagram
    - Standardized error responses
    - Logging
    - User-friendly messages
+
+## MongoDB ID Handling Pattern
+
+```mermaid
+sequenceDiagram
+    Client->>+API: Request with string IDs
+    API->>API: Convert string IDs to ObjectId
+    API->>+MongoDB: Query with ObjectId
+    MongoDB-->>-API: Return documents with ObjectId
+    API->>API: Convert ObjectId to string IDs
+    API-->>-Client: Response with string IDs
+```
+
+1. API Input Processing
+   - Accept string IDs in API requests
+   - Convert string IDs to ObjectId before MongoDB operations
+   - Handle conversion errors with appropriate HTTP responses
+
+2. MongoDB Operations
+   - Always use ObjectId for MongoDB queries
+   - Store ObjectId in MongoDB collections
+   - Use proper schema validation for ObjectId fields
+
+3. API Response Formatting
+   - Convert ObjectId to string before sending responses
+   - Create explicit response dictionaries with proper field names
+   - Ensure consistent field naming between requests and responses
+
+4. Error Handling
+   - Catch and handle ObjectId conversion errors
+   - Provide clear error messages for invalid ID formats
+   - Return appropriate HTTP status codes
 
 ## Testing Strategy
 

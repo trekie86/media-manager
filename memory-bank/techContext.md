@@ -16,7 +16,10 @@
 ### Database (MongoDB)
 - MongoDB with Mongo Express
 - Collections defined in mongo-init.js
-- Schemas include: movies, bins, users, sessions
+- Schemas include: movies, storage, users, sessions
+- Schema validation for all collections
+- ObjectId handling for IDs and references
+- Materialized path pattern for tree structures
 
 ### Docker Setup
 - Multi-container architecture
@@ -76,6 +79,16 @@ media-manager/
 2. Dependencies managed through uv
 3. Docker for full stack testing
 4. Hot reload enabled for both frontend and backend
+5. Test-driven development with pytest
+6. Comprehensive test suite with unit, integration, and API tests
+
+## Testing Framework
+- pytest for test execution
+- pytest-cov for coverage reporting
+- pytest-asyncio for async tests
+- Custom fixtures for database testing
+- Test database isolation
+- Comprehensive API test helpers
 
 ## External Integrations
 - TMDB API for movie metadata

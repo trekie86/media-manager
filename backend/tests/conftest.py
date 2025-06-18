@@ -34,11 +34,16 @@ from app.db.connection import connect_to_mongo, close_mongo_connection
 @pytest.fixture
 async def test_db(db_client, settings) -> AsyncGenerator[AsyncIOMotorDatabase, None]:
     """Create a test database that's deleted after each test."""
-    # Drop the test database first to ensure a clean state
-    await db_client.drop_database(settings.MONGO_DB)
-    
+    # Use the test database
     db = db_client[settings.MONGO_DB]
+    
     try:
+        # Clear collections instead of dropping the database
+        collections = await db.list_collection_names()
+        for collection in collections:
+            if collection != "system.users":  # Skip system collections
+                await db[collection].delete_many({})
+        
         # Initialize indexes with correct options
         await db.users.create_index("username", unique=True)
         await db.users.create_index("email", unique=True, sparse=True)
