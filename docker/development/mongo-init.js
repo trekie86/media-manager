@@ -1,5 +1,6 @@
-// This script initializes the MongoDB database with default collections
-db = db.getSiblingDB('media_manager');
+// This script initializes both main and test databases
+function initializeDatabase(dbName) {
+    db = db.getSiblingDB(dbName);
 
 // Create collections with validators
 db.createCollection('movies', {
@@ -142,10 +143,20 @@ db.storage.createIndex({ "path": 1, "type": 1 });
 db.users.createIndex({ "username": 1 }, { unique: true });
 db.users.createIndex({ "email": 1 }, { unique: true, sparse: true });
 
+}
+
+// Initialize main database
+initializeDatabase('media_manager');
+
+// Initialize test database
+initializeDatabase('media_manager_test');
+
 // Create application user with credentials from environment variables
 const appUsername = process.env.MONGO_APP_USERNAME || 'app_user';
 const appPassword = process.env.MONGO_APP_PASSWORD || 'app_password';
 
+// Create application user
+db = db.getSiblingDB('media_manager');
 db.createUser({
   user: appUsername,
   pwd: appPassword,
@@ -153,6 +164,23 @@ db.createUser({
     {
       role: 'readWrite',
       db: 'media_manager'
+    }
+  ]
+});
+
+// Create test user with additional permissions for test databases
+db = db.getSiblingDB('media_manager_test');
+db.createUser({
+  user: 'test_user',
+  pwd: 'test_password',
+  roles: [
+    {
+      role: 'readWrite',
+      db: 'media_manager_test'
+    },
+    {
+      role: 'dbAdmin',
+      db: 'media_manager_test'
     }
   ]
 });

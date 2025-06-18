@@ -49,8 +49,9 @@ class Settings(BaseSettings):
     TMDB_API_URL: str = "https://api.themoviedb.org/3"
     
     # Authentication
-    SECRET_KEY: str = "change_me_in_production"  # Used for session encryption
-    SESSION_EXPIRE_MINUTES: int = 60 * 24  # 24 hours
+    SECRET_KEY: str = "change_me_in_production"  # Used for JWT signing
+    ALGORITHM: str = "HS256"  # JWT signing algorithm
+    ACCESS_TOKEN_EXPIRE_MINUTES: int = 60 * 24  # 24 hours
     
     # Model configuration
     model_config = SettingsConfigDict(
@@ -84,8 +85,8 @@ def get_settings() -> Settings:
     if env == "test":
         # Override settings for test environment
         settings.MONGO_HOST = "localhost"
-        settings.MONGO_USER = "test"
-        settings.MONGO_PASSWORD = "test"
+        settings.MONGO_USER = "test_user"
+        settings.MONGO_PASSWORD = "test_password"
         settings.MONGO_DB = "media_manager_test"
         settings.TMDB_API_KEY = "test_key"
     

@@ -6,7 +6,7 @@ from typing import AsyncGenerator, Generator
 
 import pytest
 from fastapi import FastAPI
-from httpx import AsyncClient
+from httpx import AsyncClient, ASGITransport
 from motor.motor_asyncio import AsyncIOMotorClient, AsyncIOMotorDatabase
 
 from app.core.config import get_settings
@@ -22,20 +22,33 @@ def settings():
 @pytest.fixture
 async def db_client(settings) -> AsyncGenerator[AsyncIOMotorClient, None]:
     """Create a test database client."""
-    client = AsyncIOMotorClient(settings.MONGODB_URL)
+    client = AsyncIOMotorClient(settings.mongodb_url)
     try:
         yield client
     finally:
         client.close()
 
+# Import these at the top level
+from app.db.connection import connect_to_mongo, close_mongo_connection
+
 @pytest.fixture
 async def test_db(db_client, settings) -> AsyncGenerator[AsyncIOMotorDatabase, None]:
     """Create a test database that's deleted after each test."""
-    db = db_client[settings.MONGODB_DB_NAME]
+    # Drop the test database first to ensure a clean state
+    await db_client.drop_database(settings.MONGO_DB)
+    
+    db = db_client[settings.MONGO_DB]
     try:
+        # Initialize indexes with correct options
+        await db.users.create_index("username", unique=True)
+        await db.users.create_index("email", unique=True, sparse=True)
+        
+        # Initialize the database connection
+        await connect_to_mongo()
+        
         yield db
     finally:
-        await db_client.drop_database(settings.MONGODB_DB_NAME)
+        await close_mongo_connection()
 
 # FastAPI test client fixtures
 @pytest.fixture
@@ -52,8 +65,32 @@ def app(test_db) -> FastAPI:
 @pytest.fixture
 async def client(app) -> AsyncGenerator[AsyncClient, None]:
     """Create an async test client for FastAPI endpoints."""
-    async with AsyncClient(app=app, base_url="http://test") as client:
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
         yield client
+
+# Auth fixtures
+@pytest.fixture
+async def test_user(client, sample_user_data) -> dict:
+    """Create a test user and return their data."""
+    response = await client.post("/api/auth/register", json=sample_user_data)
+    assert response.status_code == 201
+    return sample_user_data
+
+@pytest.fixture
+async def auth_token(client, test_user) -> str:
+    """Get an authentication token for the test user."""
+    response = await client.post("/api/auth/login", json={
+        "username": test_user["username"],
+        "password": test_user["password"]
+    })
+    assert response.status_code == 200
+    return response.json()["access_token"]
+
+@pytest.fixture
+async def auth_client(client, auth_token) -> AsyncClient:
+    """Get an authenticated client for testing protected endpoints."""
+    client.headers["Authorization"] = f"Bearer {auth_token}"
+    return client
 
 # Test data fixtures
 @pytest.fixture

@@ -1,14 +1,28 @@
 """
 Main FastAPI application module.
 """
+from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.core.config import settings
 from app.db import connect_to_mongo, close_mongo_connection
+from app.api import api_router
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    """
+    Handle startup and shutdown events for the FastAPI application.
+    """
+    # Startup: Initialize database connection
+    await connect_to_mongo()
+    yield
+    # Shutdown: Close database connection
+    await close_mongo_connection()
 
 # Create FastAPI app instance
 app = FastAPI(
+    lifespan=lifespan,
     title=settings.PROJECT_NAME,
     description="""
     Media Manager API enables managing physical media collections and their storage locations.
@@ -56,20 +70,8 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Database connection management
-@app.on_event("startup")
-async def startup_db_client():
-    """
-    Initialize database connection on startup.
-    """
-    await connect_to_mongo()
-
-@app.on_event("shutdown")
-async def shutdown_db_client():
-    """
-    Close database connection on shutdown.
-    """
-    await close_mongo_connection()
+# Include API routes
+app.include_router(api_router)
 
 # Health check endpoint
 @app.get("/health")
