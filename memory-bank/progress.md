@@ -75,8 +75,20 @@
   - [x] Validation tests
   - [x] Enum value tests
   - [x] 100% coverage achieved
-- [ ] Storage model tests
-- [ ] User model tests
+- [x] Storage model tests
+  - [x] Basic validation tests
+  - [x] Storage type enumeration tests
+  - [x] Tree structure validation
+  - [x] Metadata validation
+  - [x] Response model tests
+  - [x] 100% coverage achieved
+- [x] User model tests
+  - [x] Base user validation
+  - [x] User creation validation
+  - [x] Update model validation
+  - [x] Database model validation
+  - [x] Response model validation
+  - [x] 100% coverage achieved
 
 ### Authentication System
 - [ ] Session management implementation
@@ -148,16 +160,18 @@
 - [ ] E2E tests
 
 ## Current Challenges/Decisions
-- Testing framework implementation in progress
-- Movie model tests completed with full coverage
-- Following TDD approach for remaining models
-- Need to implement integration test infrastructure
+- Testing framework implementation completed for models
+- All model tests completed with 100% coverage
+- Successfully following TDD approach
+- Ready to proceed with integration test infrastructure
 
 ## Notes for Next Session
-- Implement Storage model tests following established patterns
-- Add User model tests
 - Set up integration test infrastructure
 - Create API test helpers
+- Implement integration tests for:
+  - Database operations
+  - TMDB API integration
+  - Authentication flows
 - Consider CI integration setup
 
 ## Environment Details

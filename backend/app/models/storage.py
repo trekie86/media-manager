@@ -24,7 +24,11 @@ class StorageMetadata(BaseModel):
     """
     Optional metadata for storage locations.
     """
-    capacity: Optional[int] = Field(None, description="Storage capacity (if applicable)")
+    capacity: Optional[int] = Field(
+        None, 
+        description="Storage capacity (if applicable)",
+        ge=0  # Must be greater than or equal to 0
+    )
     dimensions: Optional[str] = Field(None, description="Physical dimensions")
     location: Optional[str] = Field(None, description="Physical location or coordinates")
     custom: Dict[str, Any] = Field(
@@ -49,6 +53,15 @@ class StorageBase(MongoModel):
         default_factory=StorageMetadata,
         description="Optional metadata specific to the storage type"
     )
+
+    @model_validator(mode='after')
+    def validate_path_with_parent(self) -> 'StorageBase':
+        """Ensure path is valid when parent_id is present."""
+        if self.parent_id and not self.path:
+            raise ValueError("Path cannot be empty when parent_id is set")
+        if self.parent_id and self.parent_id not in self.path:
+            raise ValueError("Path must contain parent_id")
+        return self
 
 
 class StorageCreate(StorageBase):
