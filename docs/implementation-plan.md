@@ -12,45 +12,40 @@ gantt
     dateFormat YYYY-MM-DD
     
     section Phase 1: Project Setup
-    Docker Environment Setup       :2025-06-10, 2d
-    Project Structure             :2d
-    Database Setup               :2d
+    Docker Environment Setup       :done, 2025-06-10, 2d
+    Project Structure             :done, 2d
+    Database Setup               :done, 2d
     
-    section Phase 2: Core Backend
-    FastAPI Setup                :after Phase 1, 2d
-    Database Models              :2d
-    Basic CRUD Endpoints         :3d
+    section Phase 2A: Core Backend
+    FastAPI Setup                :done, after Phase 1, 2d
+    Database Models              :done, 2d
+    Storage API Implementation   :done, 3d
+    Authentication System        :active, 2d
+    Movie Management API         :3d
+    TMDB Integration            :2d
+    Search & Filter             :2d
     API Documentation           :1d
     
-    section Phase 3: Auth System
-    User Management             :after Phase 2, 2d
-    Session Handling            :2d
-    Protected Routes            :1d
-    
-    section Phase 4: TMDB Integration
-    TMDB API Client             :after Phase 3, 2d
-    Movie Data Integration      :2d
-    Image Handling              :2d
-    
-    section Phase 5: Frontend Base
-    Svelte Setup               :after Phase 4, 1d
+    section Phase 2B: Frontend Base
+    Svelte Setup               :after Phase 2A, 1d
     Skeleton UI Integration    :2d
     Basic Layout & Navigation  :2d
+    API Client Implementation  :2d
     
-    section Phase 6: Frontend Features
-    Movie Management UI        :after Phase 5, 3d
-    Bin Management UI         :2d
-    Search & Filter           :2d
+    section Phase 3: Frontend Features
+    Movie Management UI        :after Phase 2B, 3d
+    Storage Management UI      :2d
+    Search & Filter UI         :2d
     
-    section Phase 7: Testing & Polish
-    API Testing              :after Phase 6, 2d
+    section Phase 4: Testing & Polish
+    API Testing              :after Phase 3, 2d
     UI Testing               :2d
     Performance Optimization :2d
 ```
 
 ## Implementation Phases
 
-### Phase 1: Project Setup (Estimated: 6 days)
+### Phase 1: Project Setup (Completed)
 - [x] Docker Environment Setup
   - [x] Create docker-compose.yml
   - [x] Frontend container configuration
@@ -60,7 +55,7 @@ gantt
   - [x] Hot-reload setup for development
 
 - [x] Project Structure
-  - [ ] Frontend scaffold
+  - [ ] Frontend scaffold (Pending Phase 2B)
     - [ ] Svelte project initialization
     - [ ] Skeleton UI setup
     - [ ] Basic component structure
@@ -69,7 +64,7 @@ gantt
     - [x] Project directory structure
     - [x] Dependencies management (using uv + pip-compile)
   - [x] Documentation structure
-    - [ ] API documentation setup
+    - [x] API documentation setup
     - [x] Development guide
     - [x] Environment setup guide
 
@@ -78,125 +73,224 @@ gantt
   - [x] Development scripts (setup_dev.sh/ps1)
   - [x] Documentation for local development
 
-- [ ] Database Setup
-  - [ ] MongoDB initialization script
-  - [ ] Database connection configuration
-  - [ ] Basic schema design
-  - [ ] Data backup strategy
+- [x] Database Setup
+  - [x] MongoDB initialization script
+  - [x] Database connection configuration
+  - [x] Basic schema design
+  - [x] Data backup strategy
 
-### Phase 2: Core Backend
-[To be detailed before starting Phase 2]
+### Phase 2A: Core Backend (In Progress)
 
-### Phase 3: Authentication System
-[To be detailed before starting Phase 3]
+#### Storage API (Completed)
+- [x] Storage Model Implementation
+  - [x] Define storage schema with materialized path pattern
+  - [x] Implement storage types (cabinet, shelf, bin, drawer)
+  - [x] Add metadata support
+  - [x] Create validation rules
 
-### Phase 4: TMDB Integration
-[To be detailed before starting Phase 4]
+- [x] Storage API Endpoints
+  - [x] Create storage endpoint
+  - [x] List storage endpoint
+  - [x] Update storage endpoint
+  - [x] Delete storage endpoint
+  - [x] Get tree endpoint
 
-### Phase 5: Frontend Foundation
-[To be detailed before starting Phase 5]
+- [x] Storage Tree Operations
+  - [x] Parent-child relationship management
+  - [x] Path generation and updates
+  - [x] Cycle detection
+  - [x] Cascading updates for subtrees
 
-### Phase 6: Frontend Features
-[To be detailed before starting Phase 6]
+- [x] Storage API Testing
+  - [x] Unit tests for storage model
+  - [x] Integration tests for storage API
+  - [x] Tree operation tests
+  - [x] Validation tests
 
-### Phase 7: Testing & Polish
-[To be detailed before starting Phase 7]
+#### Authentication System (In Progress)
+- [x] User Model Implementation
+  - [x] Define user schema
+  - [x] Password hashing
+  - [x] User validation
 
-## Phase 1 Detailed Breakdown
+- [x] Authentication API Endpoints
+  - [x] User registration endpoint
+  - [x] User login endpoint
+  - [ ] Session management
+  - [ ] Protected route middleware
 
-### Docker Environment Setup Checklist
-1. Initial Setup
-   - [ ] Create base docker-compose.yml
-   - [ ] Define networks for service communication
-   - [ ] Configure volume mounts for persistence
+- [ ] Authentication Testing
+  - [x] User registration tests
+  - [x] User login tests
+  - [ ] Session management tests
+  - [ ] Protected route tests
 
-2. Frontend Container
-   - [ ] Node.js base image selection
-   - [ ] Svelte development environment
-   - [ ] Hot-reload configuration
-   - [ ] Port mapping (default: 3000)
+#### Movie Management API (Pending)
+- [x] Movie Model Implementation
+  - [x] Define movie schema
+  - [x] Link to storage locations
+  - [x] Support for metadata
 
-3. Backend Container
-   - [ ] Python base image selection
-   - [ ] FastAPI development environment
-   - [ ] Hot-reload configuration
-   - [ ] Port mapping (default: 8000)
+- [ ] Movie API Endpoints
+  - [ ] Create movie endpoint
+  - [ ] Get movie endpoint
+  - [ ] Update movie endpoint
+  - [ ] Delete movie endpoint
+  - [ ] List movies endpoint
+  - [ ] Search movies endpoint
 
-4. MongoDB Container
-   - [ ] Official MongoDB image setup
-   - [ ] Data persistence volume
-   - [ ] Security configuration
-   - [ ] Port mapping (default: 27017)
+- [ ] TMDB Integration
+  - [ ] TMDB API client
+  - [ ] Movie metadata fetching
+  - [ ] Cover image handling
+  - [ ] Error handling for external API
 
-### Project Structure Checklist
-1. Frontend Structure
-   - [ ] Initialize Svelte project
-   - [ ] Install Skeleton UI
-   - [ ] Set up routing
-   - [ ] Create base components structure:
-     ```
-     frontend/
-     ├── src/
-     │   ├── components/
-     │   ├── routes/
-     │   ├── stores/
-     │   ├── lib/
-     │   └── assets/
-     ```
+- [ ] Movie API Testing
+  - [ ] Unit tests for movie model
+  - [ ] Integration tests for movie API
+  - [ ] TMDB integration tests
+  - [ ] Search functionality tests
 
-2. Backend Structure
-   - [ ] Initialize FastAPI project
-   - [ ] Create modular structure:
-     ```
-     backend/
-     ├── app/
-     │   ├── api/
-     │   ├── core/
-     │   ├── db/
-     │   ├── models/
-     │   └── services/
-     ```
+#### API Documentation (Pending)
+- [ ] OpenAPI/Swagger documentation
+  - [ ] Authentication endpoints
+  - [ ] Storage endpoints
+  - [ ] Movie endpoints
+  - [ ] Search endpoints
 
-3. Documentation Structure
-   - [ ] API documentation setup
-   - [ ] Development guide
-   - [ ] Environment setup guide
+- [ ] Usage examples
+  - [ ] Authentication flow
+  - [ ] Storage management
+  - [ ] Movie management
+  - [ ] Search operations
 
-### Database Setup Checklist
-1. MongoDB Setup
-   - [ ] Create initialization scripts
-   - [ ] Define collections:
-     - movies
-     - bins
-     - users
-     - sessions
-   - [ ] Set up indexes
-   - [ ] Create backup strategy
+### Phase 2B: Frontend Foundation (Pending)
 
-2. Database Configuration
-   - [ ] Connection string setup
-   - [ ] Environment variables
-   - [ ] Security configuration
+#### Svelte Setup
+- [ ] Initialize Svelte project
+- [ ] Configure build system
+- [ ] Set up development environment
+- [ ] Configure hot module replacement
 
-## Acceptance Criteria for Phase 1
-1. Docker Environment
-   - All containers start successfully
-   - Services can communicate
-   - Development hot-reload works
-   - Volumes persist data
+#### Skeleton UI Integration
+- [ ] Install Skeleton UI
+- [ ] Configure theme
+- [ ] Create base components
+- [ ] Implement responsive layout
 
-2. Project Structure
-   - All directories created
-   - Base configuration files in place
-   - Documentation started
+#### Component Structure
+- [ ] Create component hierarchy
+- [ ] Implement shared components
+- [ ] Set up routing
+- [ ] Create layout components
 
-3. Database
-   - MongoDB runs in container
-   - Collections created
-   - Test connection successful
+#### API Client Implementation
+- [ ] Create API client module
+- [ ] Implement authentication handling
+- [ ] Create service modules for each API
+- [ ] Add error handling
+
+### Phase 3: Frontend Features (Pending)
+
+#### Movie Management UI
+- [ ] Movie list view
+- [ ] Movie detail view
+- [ ] Add/edit movie forms
+- [ ] TMDB search integration
+- [ ] Cover image display
+
+#### Storage Management UI
+- [ ] Storage hierarchy view
+- [ ] Storage detail view
+- [ ] Add/edit storage forms
+- [ ] Tree visualization
+- [ ] Drag-and-drop organization
+
+#### Search & Filter UI
+- [ ] Search interface
+- [ ] Filter components
+- [ ] Results display
+- [ ] Sorting options
+
+### Phase 4: Testing & Polish (Pending)
+
+#### API Testing
+- [ ] End-to-end API tests
+- [ ] Performance testing
+- [ ] Load testing
+- [ ] Security testing
+
+#### UI Testing
+- [ ] Component tests
+- [ ] Integration tests
+- [ ] End-to-end tests
+- [ ] Accessibility testing
+
+#### Performance Optimization
+- [ ] API response optimization
+- [ ] Database query optimization
+- [ ] Frontend bundle optimization
+- [ ] Caching strategy
+
+## Acceptance Criteria
+
+### Phase 2A: Core Backend
+1. Storage API
+   - ✅ All storage API endpoints implemented and tested
+   - ✅ Tree operations working correctly
+   - ✅ Proper validation and error handling
+   - ✅ MongoDB schema validation working
+
+2. Authentication System
+   - ✅ User registration and login working
+   - ⏳ Session management implemented
+   - ⏳ Protected routes working correctly
+   - ⏳ Proper error handling for auth failures
+
+3. Movie Management API
+   - ⏳ All movie API endpoints implemented and tested
+   - ⏳ TMDB integration working correctly
+   - ⏳ Search functionality implemented
+   - ⏳ Proper error handling for TMDB API failures
+
+4. API Documentation
+   - ⏳ OpenAPI/Swagger documentation complete
+   - ⏳ All endpoints documented
+   - ⏳ Usage examples provided
+   - ⏳ Authentication flow documented
+
+### Phase 2B: Frontend Foundation
+1. Svelte Setup
+   - ⏳ Svelte project initialized and configured
+   - ⏳ Development environment working
+   - ⏳ Build system configured
+   - ⏳ Hot module replacement working
+
+2. Skeleton UI Integration
+   - ⏳ Skeleton UI installed and configured
+   - ⏳ Theme customized for Media Manager
+   - ⏳ Base components created
+   - ⏳ Responsive layout implemented
+
+3. Component Structure
+   - ⏳ Component hierarchy established
+   - ⏳ Shared components implemented
+   - ⏳ Routing configured
+   - ⏳ Layout components created
+
+4. API Client Implementation
+   - ⏳ API client module created
+   - ⏳ Authentication handling implemented
+   - ⏳ Service modules for each API created
+   - ⏳ Error handling implemented
 
 ## Development Session Notes
 [Section for tracking progress between development sessions]
 
 Date | Progress | Next Steps | Notes
 -----|----------|------------|-------
+2025-06-10 | Project setup initiated | Complete Docker configuration | Initial repository created
+2025-06-15 | Database setup completed | Begin API implementation | MongoDB schema defined
+2025-06-17 | Storage API implementation started | Complete storage endpoints | Tree structure ADR created
+2025-06-25 | Storage API completed | Begin movie management API | All storage tests passing
+2025-06-30 | Implementation plan updated | Continue with movie management API | Phase 2A in progress
