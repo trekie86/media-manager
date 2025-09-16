@@ -77,6 +77,10 @@
   - [x] Get movie endpoint
   - [x] Update movie endpoint
   - [x] Delete movie endpoint
+  - [x] Local movie search endpoint with text search and regex fallback
+  - [x] TMDB search endpoint for external movie discovery
+  - [x] TMDB movie details endpoint
+  - [x] Movie enrichment endpoint with automatic metadata enhancement
 - [x] Movie service layer (implemented in API routes)
 - [x] Movie repository implementation (using MongoDB directly)
 - [x] Storage integration with validation
@@ -85,8 +89,19 @@
   - [x] Validation tests
   - [x] Error handling tests
   - [x] Filtering and pagination tests
-- [ ] TMDB API client implementation
-- [ ] Search functionality tests
+- [x] TMDB API client implementation
+  - [x] Professional TMDB service with singleton pattern
+  - [x] Movie search functionality
+  - [x] Movie details retrieval
+  - [x] Movie metadata enrichment
+  - [x] Image URL generation
+  - [x] Error handling and graceful degradation
+  - [x] HTTP client management with proper cleanup
+- [x] Search functionality implementation
+  - [x] Local movie search with MongoDB text search
+  - [x] Regex fallback for collections without text indexes
+  - [x] TMDB external search integration
+  - [x] Combined search capabilities
 
 ### Storage Management
 - [x] Storage routes
@@ -134,14 +149,25 @@
 - [ ] E2E tests
 
 ## Current Challenges/Decisions
-- MongoDB schema validation requires careful type handling
-- Need to implement movie management endpoints
-- TMDB API integration needed
-- API documentation needs to be completed
+- MongoDB schema validation requires careful type handling ✅ RESOLVED
+- Need to implement movie management endpoints ✅ COMPLETED
+- TMDB API integration needed ✅ COMPLETED
+- API documentation needs to be completed (TMDB integration documented)
+- Frontend development is now the primary focus
+- Authentication system implementation needed
+- Performance optimization for large collections
 
 ## Notes for Next Session
-- Start implementing movie management endpoints
-- Add TMDB API integration
-- Implement search functionality
-- Complete API documentation
+- ✅ Movie management endpoints completed with full TMDB integration
+- ✅ TMDB API integration completed with professional service architecture
+- ✅ Search functionality implemented (local and TMDB)
+- ✅ TMDB integration documentation completed
+- **NEW PRIORITY**: Frontend development (Svelte per project brief)
+  - Set up Svelte application with Skeleton UI
+  - Implement authentication UI
+  - Create movie catalog interface with TMDB integration
+  - Build storage management interface
+  - Integrate search functionality in UI
 - Consider adding performance tests for storage operations
+- Complete authentication system implementation
+- Add API documentation for auth endpoints

@@ -8,16 +8,19 @@ from fastapi.middleware.cors import CORSMiddleware
 from app.core.config import settings
 from app.db import connect_to_mongo, close_mongo_connection
 from app.api import api_router
+from app.services.tmdb import init_tmdb_service, cleanup_tmdb_service
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     """
     Handle startup and shutdown events for the FastAPI application.
     """
-    # Startup: Initialize database connection
+    # Startup: Initialize database connection and services
     await connect_to_mongo()
+    await init_tmdb_service()
     yield
-    # Shutdown: Close database connection
+    # Shutdown: Close database connection and cleanup services
+    await cleanup_tmdb_service()
     await close_mongo_connection()
 
 # Create FastAPI app instance

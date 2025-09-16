@@ -13,10 +13,11 @@ graph TB
     subgraph Backend [Backend - FastAPI]
         API[REST API]
         Auth[Session Auth]
-        TMDB[TMDB Integration]
+        TMDB[TMDB Service]
         DB_Logic[Database Logic]
         Tests[Test Suites]
         StorageTree[Storage Tree Logic]
+        Services[Service Layer]
     end
 
     subgraph Database [MongoDB]
@@ -31,7 +32,8 @@ graph TB
     State --> API_Client
     API_Client --> API
     API --> Auth
-    API --> TMDB
+    API --> Services
+    Services --> TMDB
     API --> DB_Logic
     API --> StorageTree
     DB_Logic --> Movies
@@ -56,6 +58,8 @@ graph TB
    - Encapsulates business logic
    - Coordinates between repositories
    - Handles complex operations
+   - TMDB service with singleton pattern
+   - Dependency injection via FastAPI
 
 3. Tree Structure Pattern
    ```mermaid
@@ -86,6 +90,14 @@ graph TB
    - Standardized REST endpoints
    - Consistent response formats
    - Error handling patterns
+
+6. External Service Integration
+   - TMDB API service with professional architecture
+   - Singleton pattern for service management
+   - HTTP client lifecycle management
+   - Graceful degradation on service failures
+   - Automatic image URL generation
+   - Rate limiting and timeout handling
 
 ### Testing Patterns
 
@@ -221,20 +233,52 @@ sequenceDiagram
     Server-->>-Client: Success Response
 ```
 
-3. Movie Management
+3. Movie Management with TMDB Integration
 ```mermaid
 sequenceDiagram
     Client->>+Server: Add Movie Request
-    Server->>+TMDB: Fetch Movie Data
-    TMDB-->>-Server: Movie Details
     Server->>+Database: Validate Storage
     Database-->>-Server: Storage Data
     Server->>+Database: Store Movie
     Database-->>-Server: Confirmation
     Server-->>-Client: Success Response
+    
+    Note over Client,Server: Movie Enrichment Flow
+    Client->>+Server: Enrich Movie Request
+    Server->>+TMDB: Search/Get Movie Data
+    TMDB-->>-Server: Enhanced Movie Details
+    Server->>+Database: Update Movie with TMDB Data
+    Database-->>-Server: Confirmation
+    Server-->>-Client: Enriched Movie Response
 ```
 
-4. Testing Flow
+4. TMDB Service Architecture
+```mermaid
+sequenceDiagram
+    App->>+TMDBServiceManager: Initialize Service
+    TMDBServiceManager->>+TMDBService: Create Instance
+    TMDBService->>+HTTPClient: Create Persistent Client
+    HTTPClient-->>-TMDBService: Client Ready
+    TMDBService-->>-TMDBServiceManager: Service Ready
+    TMDBServiceManager-->>-App: Service Initialized
+    
+    Note over App,HTTPClient: API Request Flow
+    API->>+TMDBService: Search Movies
+    TMDBService->>+HTTPClient: HTTP Request to TMDB
+    HTTPClient-->>-TMDBService: TMDB Response
+    TMDBService->>TMDBService: Process & Enhance Data
+    TMDBService-->>-API: Enhanced Results
+    
+    Note over App,HTTPClient: Cleanup Flow
+    App->>+TMDBServiceManager: Cleanup
+    TMDBServiceManager->>+TMDBService: Close Service
+    TMDBService->>+HTTPClient: Close Client
+    HTTPClient-->>-TMDBService: Client Closed
+    TMDBService-->>-TMDBServiceManager: Service Closed
+    TMDBServiceManager-->>-App: Cleanup Complete
+```
+
+5. Testing Flow
 ```mermaid
 sequenceDiagram
     Test->>+TestDB: Setup Test Database
@@ -248,10 +292,16 @@ sequenceDiagram
 ## Integration Points
 
 1. TMDB Integration
-   - API client module
-   - Rate limiting
-   - Error handling
-   - Data transformation
+   - Professional service architecture with singleton pattern
+   - Persistent HTTP client with connection pooling
+   - Comprehensive error handling and graceful degradation
+   - Automatic image URL generation (poster and backdrop)
+   - Movie search functionality
+   - Movie details retrieval with enhanced metadata
+   - Movie enrichment with automatic metadata enhancement
+   - Rate limiting compliance and timeout handling
+   - Service lifecycle management (startup/shutdown)
+   - FastAPI dependency injection integration
 
 2. MongoDB Integration
    - Connection pooling

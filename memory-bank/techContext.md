@@ -43,11 +43,15 @@ media-manager/
 ├── backend/
 │   ├── app/
 │   │   ├── api/
+│   │   │   ├── movies.py (CRUD + TMDB integration)
+│   │   │   ├── auth.py
+│   │   │   └── storage.py
 │   │   ├── core/
 │   │   │   └── config.py
 │   │   ├── db/
 │   │   ├── models/
 │   │   └── services/
+│   │       └── tmdb.py (TMDB service implementation)
 │   ├── scripts/
 │   │   ├── setup_dev.sh
 │   │   └── setup_dev.ps1
@@ -81,6 +85,8 @@ media-manager/
 4. Hot reload enabled for both frontend and backend
 5. Test-driven development with pytest
 6. Comprehensive test suite with unit, integration, and API tests
+7. Service-oriented architecture with dependency injection
+8. External service integration with proper lifecycle management
 
 ## Testing Framework
 - pytest for test execution
@@ -91,8 +97,20 @@ media-manager/
 - Comprehensive API test helpers
 
 ## External Integrations
-- TMDB API for movie metadata
-- Future consideration for OAuth integration
+
+### TMDB (The Movie Database) API
+- Professional service implementation with singleton pattern
+- Persistent HTTP client with connection pooling
+- Movie search, details retrieval, and metadata enrichment
+- Image URL generation for posters and backdrops
+- Comprehensive error handling and logging
+- Rate limiting and API key management
+- Service lifecycle management with proper cleanup
+
+### Future Integrations
+- OAuth integration for social login
+- Additional metadata providers
+- Streaming service availability APIs
 
 ## Security Considerations
 - Session-based authentication
