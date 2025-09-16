@@ -71,18 +71,22 @@
   - [ ] Security vulnerability tests
 
 ### Movie Management
+- [x] Movie routes
+  - [x] Create movie endpoint
+  - [x] List movies endpoint with filtering and pagination
+  - [x] Get movie endpoint
+  - [x] Update movie endpoint
+  - [x] Delete movie endpoint
+- [x] Movie service layer (implemented in API routes)
+- [x] Movie repository implementation (using MongoDB directly)
+- [x] Storage integration with validation
+- [x] Comprehensive test suites
+  - [x] CRUD operation tests (21 integration tests)
+  - [x] Validation tests
+  - [x] Error handling tests
+  - [x] Filtering and pagination tests
 - [ ] TMDB API client implementation
-- [ ] Movie routes
-  - [ ] Create movie endpoint
-  - [ ] Search movies endpoint
-  - [ ] Update movie endpoint
-  - [ ] Delete movie endpoint
-- [ ] Movie service layer
-- [ ] Movie repository implementation
-- [ ] Test suites
-  - [ ] TMDB integration tests
-  - [ ] CRUD operation tests
-  - [ ] Search functionality tests
+- [ ] Search functionality tests
 
 ### Storage Management
 - [x] Storage routes
