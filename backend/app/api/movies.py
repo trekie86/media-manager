@@ -265,7 +265,7 @@ async def search_movies(
     """
     
     # Build filter query with text search
-    filter_query = {
+    filter_query: Dict[str, Any] = {
         "$text": {"$search": q}
     }
     
@@ -312,7 +312,7 @@ async def search_movies(
     except Exception as e:
         # Fallback to regex search if text index doesn't exist
         try:
-            filter_query = {
+            filter_query: Dict[str, Any] = {
                 "title": {"$regex": q, "$options": "i"}
             }
             
