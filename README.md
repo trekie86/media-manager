@@ -178,13 +178,100 @@ Notes:
 - API Documentation: http://localhost:8000/docs
 - MongoDB Express: http://localhost:8081
 
+## OpenAPI Client Generation
+
+The project includes automated OpenAPI client generation for type-safe API integration and frontend development.
+
+### Prerequisites
+
+- OpenAPI Generator CLI: `npm install -g @openapitools/openapi-generator-cli`
+- Prism CLI: `npm install -g @stoplight/prism-cli`
+- Backend server running on http://localhost:8000
+
+### Generate API Clients
+
+The project provides automated scripts to generate TypeScript and Python clients from the OpenAPI specification:
+
+```bash
+# Generate all clients (TypeScript, Python, and download OpenAPI spec)
+npm run generate:clients
+
+# Generate specific clients
+npm run generate:typescript    # TypeScript client for frontend
+npm run generate:python       # Python client for testing
+```
+
+Generated clients are created in the `generated/` directory:
+- `generated/typescript-client/` - TypeScript client for Svelte frontend
+- `generated/python-client/` - Python client for testing and automation
+- `generated/openapi.json` - Downloaded OpenAPI specification
+
+### Validate Generated Clients
+
+Ensure generated clients are working correctly:
+
+```bash
+# Validate all clients
+npm run validate:clients
+
+# Validate specific clients
+npm run validate:typescript    # Build TypeScript client
+npm run validate:python       # Install and test Python client
+```
+
+### Mock Server for Frontend Development
+
+Use Prism CLI mock server for frontend development without backend dependency:
+
+```bash
+# Start mock server (requires backend running to download spec)
+npm run mock:server
+
+# Start mock server using local OpenAPI file
+npm run mock:server:file
+```
+
+The mock server runs on http://localhost:3001 and provides realistic mock responses based on the OpenAPI specification.
+
+### Development Workflow with Clients
+
+1. **Backend Development**: Make API changes, run backend server
+2. **Generate Clients**: Run `npm run generate:clients` to update clients
+3. **Frontend Development**: Use generated TypeScript client or mock server
+4. **Testing**: Use generated Python client for automated testing
+
+### File Watching (Optional)
+
+For automatic client regeneration during development:
+
+```bash
+# Watch backend files and regenerate clients on changes
+npm run watch:openapi
+```
+
+### Configuration
+
+Client generation is configured via:
+- `openapi-generator-config.json` - OpenAPI Generator settings
+- `package.json` - npm scripts for generation and validation
+- `scripts/generate-clients.sh` - Shell script for automation
+- `scripts/validate-clients.sh` - Validation script
+
+### Generated Content
+
+⚠️ **Important**: The `generated/` directory contains build artifacts and is excluded from version control. Always regenerate clients after:
+- Pulling changes that modify the API
+- Switching branches
+- Setting up a new development environment
+
 ## Development Workflow
 
 1. Activate virtual environment (for backend development)
 2. Make your changes
-3. Run tests: `pytest` (in backend directory)
-4. Format code: `black .` (in backend directory)
-5. Submit pull request
+3. Generate API clients: `npm run generate:clients` (if API changed)
+4. Run tests: `pytest` (in backend directory)
+5. Format code: `black .` (in backend directory)
+6. Submit pull request
 
 ## Environment Variables
 
