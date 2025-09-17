@@ -1,0 +1,74 @@
+{
+  "name": "media-manager",
+  "version": "1.0.0",
+  "description": "Media Manager - Physical media collection management with storage tracking",
+  "private": true,
+  "scripts": {
+    "dev": "concurrently \"npm run dev:backend\" \"npm run dev:frontend\" \"npm run dev:clients\"",
+    "dev:backend": "cd backend && uvicorn app.main:app --reload --host 0.0.0.0 --port 8000",
+    "dev:frontend": "cd frontend && npm run dev",
+    "dev:clients": "npm run watch:openapi",
+    "build": "npm run build:backend && npm run build:frontend && npm run generate:clients",
+    "build:backend": "cd backend && python -m build",
+    "build:frontend": "cd frontend && npm run build",
+    "test": "npm run test:backend && npm run test:frontend",
+    "test:backend": "cd backend && python -m pytest",
+    "test:frontend": "cd frontend && npm test",
+    "generate:clients": "./scripts/generate-clients.sh --all",
+    "generate:typescript": "./scripts/generate-clients.sh --typescript",
+    "generate:python": "./scripts/generate-clients.sh --python",
+    "generate:mock": "./scripts/generate-clients.sh --mock",
+    "mock:server": "prism mock http://localhost:8000/openapi.json --host 0.0.0.0 --port 3001",
+    "mock:server:file": "prism mock generated/openapi.json --host 0.0.0.0 --port 3001",
+    "validate:openapi": "swagger-codegen-cli validate -i http://localhost:8000/openapi.json",
+    "validate:clients": "npm run validate:typescript && npm run validate:python && npm run validate:mock",
+    "validate:mock": "npm run health:mock",
+    "validate:typescript": "cd generated/typescript-client && npm run build",
+    "validate:python": "cd generated/python-client && python -m pip install -e . && python -c 'import media_manager_client; print(\"Python client validation successful\")'",
+    "watch:openapi": "nodemon --watch backend/app --ext py --exec \"npm run generate:clients\"",
+    "clean": "npm run clean:generated && npm run clean:build",
+    "clean:generated": "rm -rf generated/",
+    "clean:build": "rm -rf backend/dist frontend/dist",
+    "setup": "npm run setup:backend && npm run setup:frontend && npm run setup:tools",
+    "setup:backend": "cd backend && python -m pip install -r requirements-dev.txt",
+    "setup:frontend": "cd frontend && npm install",
+    "setup:tools": "npm install -g @openapitools/openapi-generator-cli swagger-codegen-cli nodemon concurrently",
+    "health:api": "curl -f http://localhost:8000/health || exit 1",
+    "health:frontend": "curl -f http://localhost:5173 || exit 1",
+    "health:mock": "curl -f http://localhost:3001/health || exit 1",
+    "docs:serve": "cd generated/docs && python -m http.server 8080",
+    "lint": "npm run lint:backend && npm run lint:frontend",
+    "lint:backend": "cd backend && python -m flake8 app/ && python -m black --check app/",
+    "lint:frontend": "cd frontend && npm run lint",
+    "format": "npm run format:backend && npm run format:frontend",
+    "format:backend": "cd backend && python -m black app/",
+    "format:frontend": "cd frontend && npm run format"
+  },
+  "devDependencies": {
+    "concurrently": "^8.2.2",
+    "nodemon": "^3.0.2"
+  },
+  "engines": {
+    "node": ">=18.0.0",
+    "npm": ">=9.0.0"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/trekie86/media-manager.git"
+  },
+  "keywords": [
+    "media-manager",
+    "movies",
+    "storage",
+    "collection",
+    "fastapi",
+    "svelte",
+    "mongodb"
+  ],
+  "author": "trekie86",
+  "license": "MIT",
+  "workspaces": [
+    "frontend",
+    "generated/typescript"
+  ]
+}
