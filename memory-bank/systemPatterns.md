@@ -49,55 +49,55 @@ graph TB
 
 ### Backend Patterns
 
-1. Repository Pattern
-   - Abstracts database operations
-   - Separates data access from business logic
-   - Implemented per collection (Movies, Storage, Users)
+#### Repository Pattern
+- Abstracts database operations
+- Separates data access from business logic
+- Implemented per collection (Movies, Storage, Users)
 
-2. Service Layer Pattern
-   - Encapsulates business logic
-   - Coordinates between repositories
-   - Handles complex operations
-   - TMDB service with singleton pattern
-   - Dependency injection via FastAPI
+#### Service Layer Pattern
+- Encapsulates business logic
+- Coordinates between repositories
+- Handles complex operations
+- TMDB service with singleton pattern
+- Dependency injection via FastAPI
 
-3. Tree Structure Pattern
-   ```mermaid
-   graph TD
-       A[Storage Service] --> B[Tree Operations]
-       B --> C[Create Node]
-       B --> D[Move Node]
-       B --> E[Delete Node]
-       B --> F[Query Tree]
-       
-       C --> G[Validate Parent]
-       C --> H[Update Path]
-       
-       D --> I[Update Children]
-       D --> J[Rewrite Paths]
-       
-       F --> K[Get Ancestors]
-       F --> L[Get Descendants]
-       F --> M[Get Siblings]
-   ```
+#### Tree Structure Pattern
+```mermaid
+graph TD
+    A[Storage Service] --> B[Tree Operations]
+    B --> C[Create Node]
+    B --> D[Move Node]
+    B --> E[Delete Node]
+    B --> F[Query Tree]
+    
+    C --> G[Validate Parent]
+    C --> H[Update Path]
+    
+    D --> I[Update Children]
+    D --> J[Rewrite Paths]
+    
+    F --> K[Get Ancestors]
+    F --> L[Get Descendants]
+    F --> M[Get Siblings]
+```
 
-4. Dependency Injection
-   - FastAPI's built-in DI system
-   - Database connections
-   - Configuration settings
+#### Dependency Injection
+- FastAPI's built-in DI system
+- Database connections
+- Configuration settings
 
-5. CRUD Operations
-   - Standardized REST endpoints
-   - Consistent response formats
-   - Error handling patterns
+#### CRUD Operations
+- Standardized REST endpoints
+- Consistent response formats
+- Error handling patterns
 
-6. External Service Integration
-   - TMDB API service with professional architecture
-   - Singleton pattern for service management
-   - HTTP client lifecycle management
-   - Graceful degradation on service failures
-   - Automatic image URL generation
-   - Rate limiting and timeout handling
+#### External Service Integration
+- TMDB API service with professional architecture
+- Singleton pattern for service management
+- HTTP client lifecycle management
+- Graceful degradation on service failures
+- Automatic image URL generation
+- Rate limiting and timeout handling
 
 ### Testing Patterns
 

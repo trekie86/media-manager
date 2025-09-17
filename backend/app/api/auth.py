@@ -1,5 +1,5 @@
 """Authentication routes for user registration and login."""
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from typing import Optional
 
 from fastapi import APIRouter, Depends, HTTPException, status
@@ -35,9 +35,9 @@ def create_access_token(data: dict, expires_delta: Optional[timedelta] = None) -
     to_encode = data.copy()
     
     if expires_delta:
-        expire = datetime.utcnow() + expires_delta
+        expire = datetime.now(timezone.utc) + expires_delta
     else:
-        expire = datetime.utcnow() + timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES)
+        expire = datetime.now(timezone.utc) + timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES)
     
     to_encode.update({"exp": expire})
     encoded_jwt = jwt.encode(
@@ -46,6 +46,40 @@ def create_access_token(data: dict, expires_delta: Optional[timedelta] = None) -
         algorithm=settings.ALGORITHM
     )
     return encoded_jwt
+
+async def get_current_user(token: str = Depends(oauth2_scheme), db=Depends(get_database)) -> UserInDB:
+    """
+    Authentication middleware to get current user from JWT token.
+    """
+    credentials_exception = HTTPException(
+        status_code=status.HTTP_401_UNAUTHORIZED,
+        detail="Could not validate credentials",
+        headers={"WWW-Authenticate": "Bearer"},
+    )
+    
+    try:
+        settings = get_settings()
+        payload = jwt.decode(token, settings.SECRET_KEY, algorithms=[settings.ALGORITHM])
+        username: Optional[str] = payload.get("sub")
+        if username is None:
+            raise credentials_exception
+    except JWTError:
+        raise credentials_exception
+    
+    # Get user from database
+    user_doc = await db.users.find_one({"username": username})
+    if user_doc is None:
+        raise credentials_exception
+    
+    return UserInDB(**user_doc)
+
+async def get_current_active_user(current_user: UserInDB = Depends(get_current_user)) -> UserInDB:
+    """
+    Get current active user (can be extended to check if user is disabled/banned).
+    """
+    # For now, all users are considered active
+    # In the future, you could add an 'is_active' field to the user model
+    return current_user
 
 @router.post("/register", response_model=UserResponse, status_code=status.HTTP_201_CREATED)
 async def register_user(user_data: UserCreate, db=Depends(get_database)):
@@ -100,4 +134,29 @@ async def login(form_data: UserLogin, db=Depends(get_database)):
         data={"sub": user.username}
     )
     
-    return TokenResponse(access_token=access_token)
+    return TokenResponse(access_token=access_token, token_type="bearer")
+
+@router.post("/logout")
+async def logout(current_user: UserInDB = Depends(get_current_active_user)):
+    """
+    Logout endpoint - in a stateless JWT system, logout is handled client-side
+    by removing the token. This endpoint can be used for logging purposes.
+    """
+    return {"message": f"User {current_user.username} logged out successfully"}
+
+@router.get("/me", response_model=UserResponse)
+async def get_current_user_info(current_user: UserInDB = Depends(get_current_active_user)):
+    """Get current user information."""
+    return UserResponse(**current_user.model_dump(exclude={"password_hash"}))
+
+@router.post("/refresh", response_model=TokenResponse)
+async def refresh_token(current_user: UserInDB = Depends(get_current_active_user)):
+    """
+    Refresh the access token for the current user.
+    This creates a new token with a fresh expiration time.
+    """
+    access_token = create_access_token(
+        data={"sub": current_user.username}
+    )
+    
+    return TokenResponse(access_token=access_token, token_type="bearer")
