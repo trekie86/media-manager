@@ -4,6 +4,8 @@ Main FastAPI application module.
 from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.middleware.trustedhost import TrustedHostMiddleware
+from fastapi.middleware.httpsredirect import HTTPSRedirectMiddleware
 
 from app.core.config import settings
 from app.db import connect_to_mongo, close_mongo_connection
@@ -205,6 +207,12 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+# Add after CORS middleware
+app.add_middleware(TrustedHostMiddleware, allowed_hosts=["localhost", "*.yourdomain.com"])
+# For production only:
+if settings.ENVIRONMENT == "production":
+    app.add_middleware(HTTPSRedirectMiddleware)
+
 # Include API routes
 app.include_router(api_router)
 
@@ -265,10 +273,27 @@ async def health_check():
     **No authentication required** - This endpoint is publicly accessible
     for monitoring and health check purposes.
     """
-    from datetime import datetime
+    from datetime import datetime, timezone
+    from app.core.health import check_database_health, check_tmdb_health, get_memory_usage
+    
+    # Perform health checks
+    checks = {
+        "database": await check_database_health(),
+        "tmdb_service": await check_tmdb_health(),
+        "memory": get_memory_usage()
+    }
+    
+    # Determine overall status
+    database_healthy = checks["database"]
+    tmdb_healthy = checks["tmdb_service"] 
+    memory_healthy = checks["memory"].get("healthy", False)
+    
+    overall_status = "healthy" if all([database_healthy, tmdb_healthy, memory_healthy]) else "unhealthy"
     
     return HealthResponse(
-        status="healthy",
+        status=overall_status,
         version=settings.VERSION,
-        timestamp=datetime.utcnow().isoformat() + "Z"
+        env=settings.ENVIRONMENT,
+        timestamp=datetime.now(timezone.utc).isoformat(),
+        checks=checks
     )

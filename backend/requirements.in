@@ -24,3 +24,6 @@ email-validator>=2.1.0.post1
 
 # Logging
 loguru>=0.7.2
+
+# System monitoring
+psutil>=5.9.0

@@ -50,6 +50,8 @@ motor==3.7.1
     # via -r requirements.in
 passlib==1.7.4
     # via -r requirements.in
+psutil==7.1.0
+    # via -r requirements.in
 pyasn1==0.6.1
     # via
     #   python-jose

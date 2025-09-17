@@ -18,6 +18,16 @@ class Settings(BaseSettings):
     VERSION: str = "0.1.0"
     API_V1_STR: str = "/api/v1"
     
+    # Model configuration
+    model_config = SettingsConfigDict(
+        env_file=".env",
+        env_file_encoding="utf-8",
+        case_sensitive=True,
+        extra="ignore"
+    )
+    
+    ENVIRONMENT: str = "development"
+    
     # CORS
     CORS_ORIGINS: Union[str, List[str]] = ["http://localhost:3000"]
 
@@ -50,16 +60,26 @@ class Settings(BaseSettings):
     
     # Authentication
     SECRET_KEY: str = "change_me_in_production"  # Used for JWT signing
+    
+    @field_validator("SECRET_KEY")
+    @classmethod
+    def validate_secret_key(cls, v: str, info) -> str:
+        # Get environment from the data being validated
+        env = info.data.get("ENVIRONMENT", "development")
+        
+        if env == "production":
+            # Ensure SECRET_KEY is not the default value in production
+            if v == "change_me_in_production":
+                raise ValueError("SECRET_KEY must be changed from default value")
+
+            if len(v) < 32:
+                raise ValueError("SECRET_KEY must be at least 32 characters long")
+        return v
+    
     ALGORITHM: str = "HS256"  # JWT signing algorithm
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 60 * 24  # 24 hours
     
-    # Model configuration
-    model_config = SettingsConfigDict(
-        env_file=".env",
-        env_file_encoding="utf-8",
-        case_sensitive=True,
-        extra="ignore"
-    )
+    
     
     @property
     def mongodb_url(self) -> str:
@@ -79,10 +99,9 @@ def get_settings() -> Settings:
     Create cached settings instance based on environment.
     For testing, override settings with test-specific values.
     """
-    env = os.getenv("ENVIRONMENT", "development")
     settings = Settings()
     
-    if env == "test":
+    if settings.ENVIRONMENT == "test":
         # Override settings for test environment
         settings.MONGO_HOST = "localhost"
         settings.MONGO_USER = "test_user"

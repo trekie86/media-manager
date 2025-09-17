@@ -125,7 +125,9 @@ class HealthResponse(BaseModel):
     
     status: str = Field(..., description="Service health status")
     version: str = Field(..., description="API version")
+    env: str = Field(..., description="Environment name")
     timestamp: Optional[str] = Field(None, description="Response timestamp")
+    checks: Optional[Dict[str, Any]] = Field(None, description="Individual health check results")
     
     class Config:
         json_schema_extra = {

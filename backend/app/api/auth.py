@@ -1,6 +1,7 @@
 """Authentication routes for user registration and login."""
 from datetime import datetime, timedelta, timezone
 from typing import Optional
+from uuid import uuid4
 
 from fastapi import APIRouter, Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
@@ -33,6 +34,13 @@ def create_access_token(data: dict, expires_delta: Optional[timedelta] = None) -
     """Create JWT access token."""
     settings = get_settings()
     to_encode = data.copy()
+    
+    # Add token ID for revocation capability
+    to_encode.update({
+        "jti": str(uuid4()),  # JWT ID
+        "iat": datetime.now(timezone.utc),  # Issued at
+        "iss": "media-manager-api"  # Issuer
+    })
     
     if expires_delta:
         expire = datetime.now(timezone.utc) + expires_delta
