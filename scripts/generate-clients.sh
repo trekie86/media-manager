@@ -223,7 +223,15 @@ case "$1" in
         show_help
         exit 0
         ;;
-    *)
+    all|typescript|python|mock|"")
         main "$1"
+        ;;
+    *)
+        log_error "Invalid argument: '$1'"
+        echo ""
+        log_info "Valid options are: all, typescript, python, mock, help"
+        echo ""
+        show_help
+        exit 1
         ;;
 esac
