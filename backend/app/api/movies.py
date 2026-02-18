@@ -15,6 +15,25 @@ from ..services.tmdb import get_tmdb_service, TMDBService
 
 router = APIRouter()
 
+# Upper bound for descendant lookups — prevents unbounded to_list() calls.
+_MAX_STORAGE_DESCENDANTS = 10_000
+
+
+async def _build_storage_filter(
+    db, storage_oid: ObjectId, include_descendants: bool
+) -> Dict[str, Any]:
+    """Return a MongoDB filter dict for storage_id, optionally spanning descendants.
+
+    When include_descendants is True the materialized-path index is used to
+    find all descendant nodes and the filter uses $in across the full subtree.
+    """
+    if include_descendants:
+        cursor = db.storage.find({"path": storage_oid}, {"_id": 1})
+        descendants = await cursor.to_list(length=_MAX_STORAGE_DESCENDANTS)
+        descendant_ids = [d["_id"] for d in descendants]
+        return {"storage_id": {"$in": [storage_oid] + descendant_ids}}
+    return {"storage_id": storage_oid}
+
 
 @router.post("/", response_model=MovieResponse, status_code=201)
 async def create_movie(
@@ -93,6 +112,9 @@ async def list_movies(
     skip: int = Query(0, ge=0, description="Number of movies to skip"),
     limit: int = Query(100, ge=1, le=1000, description="Number of movies to return"),
     storage_id: Optional[str] = Query(None, description="Filter by storage location"),
+    include_descendants: bool = Query(
+        False, description="Include movies from descendant storage locations"
+    ),
     format: Optional[str] = Query(None, description="Filter by media format"),
     genre: Optional[str] = Query(None, description="Filter by genre"),
     db=Depends(get_database),
@@ -106,9 +128,13 @@ async def list_movies(
 
     if storage_id:
         try:
-            filter_query["storage_id"] = ObjectId(storage_id)
+            storage_oid = ObjectId(storage_id)
         except Exception:
             raise HTTPException(status_code=400, detail="Invalid storage_id format")
+
+        filter_query.update(
+            await _build_storage_filter(db, storage_oid, include_descendants)
+        )
 
     if format:
         filter_query["format"] = format
@@ -148,6 +174,9 @@ async def search_movies(
     skip: int = Query(0, ge=0, description="Number of movies to skip"),
     limit: int = Query(100, ge=1, le=1000, description="Number of movies to return"),
     storage_id: Optional[str] = Query(None, description="Filter by storage location"),
+    include_descendants: bool = Query(
+        False, description="Include movies from descendant storage locations"
+    ),
     format: Optional[str] = Query(None, description="Filter by media format"),
     genre: Optional[str] = Query(None, description="Filter by genre"),
     db=Depends(get_database),
@@ -157,15 +186,24 @@ async def search_movies(
     Supports text search across movie titles and metadata.
     """
 
+    # Resolve storage filter (optionally including descendants)
+    storage_filter: Optional[Dict[str, Any]] = None
+    if storage_id:
+        try:
+            storage_oid = ObjectId(storage_id)
+        except Exception:
+            raise HTTPException(status_code=400, detail="Invalid storage_id format")
+
+        storage_filter = await _build_storage_filter(
+            db, storage_oid, include_descendants
+        )
+
     # Build filter query with text search
     filter_query: Dict[str, Any] = {"$text": {"$search": q}}
 
     # Add additional filters
-    if storage_id:
-        try:
-            filter_query["storage_id"] = ObjectId(storage_id)
-        except Exception:
-            raise HTTPException(status_code=400, detail="Invalid storage_id format")
+    if storage_filter:
+        filter_query.update(storage_filter)
 
     if format:
         filter_query["format"] = format
@@ -207,14 +245,9 @@ async def search_movies(
         try:
             filter_query: Dict[str, Any] = {"title": {"$regex": q, "$options": "i"}}
 
-            # Add additional filters
-            if storage_id:
-                try:
-                    filter_query["storage_id"] = ObjectId(storage_id)
-                except Exception:
-                    raise HTTPException(
-                        status_code=400, detail="Invalid storage_id format"
-                    )
+            # Add additional filters (reuse already-resolved storage_filter)
+            if storage_filter:
+                filter_query.update(storage_filter)
 
             if format:
                 filter_query["format"] = format
