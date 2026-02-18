@@ -21,6 +21,12 @@ click==8.2.1
     # via
     #   black
     #   uvicorn
+colorama==0.4.6
+    # via
+    #   click
+    #   loguru
+    #   pytest
+    #   uvicorn
 coverage==7.8.2
     # via pytest-cov
 cryptography==45.0.4
@@ -86,6 +92,8 @@ platformdirs==4.3.8
     # via black
 pluggy==1.6.0
     # via pytest
+psutil==7.2.2
+    # via -r requirements.in
 pyasn1==0.6.1
     # via
     #   python-jose
@@ -163,9 +171,9 @@ urllib3==2.4.0
     # via types-requests
 uvicorn==0.34.3
     # via -r requirements.in
-uvloop==0.21.0
-    # via uvicorn
 watchfiles==1.0.5
     # via uvicorn
 websockets==15.0.1
     # via uvicorn
+win32-setctime==1.2.0
+    # via loguru

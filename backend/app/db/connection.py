@@ -41,6 +41,7 @@ async def create_indexes():
     await db.users.create_index("email", unique=True, sparse=True)
     await db.movies.create_index([("title", 1), ("year", 1)])
     await db.movies.create_index("storage_id")
+    await db.movies.create_index([("title", "text"), ("genre", "text")])
 
 
 async def close_mongo_connection() -> None:
@@ -49,7 +50,7 @@ async def close_mongo_connection() -> None:
     Should be called on application shutdown.
     """
     global client
-    if client:
+    if client is not None:
         client.close()
         print("MongoDB connection closed")
 
@@ -59,6 +60,6 @@ def get_database() -> AsyncIOMotorDatabase:
     Returns the database instance.
     To be used as a FastAPI dependency.
     """
-    if not db:
+    if db is None:
         raise RuntimeError("Database not initialized. Call connect_to_mongo() first.")
     return db

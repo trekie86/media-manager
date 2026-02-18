@@ -119,7 +119,7 @@ db.createCollection('users', {
           description: 'Hashed password - required'
         },
         email: {
-          bsonType: 'string',
+          bsonType: ['string', 'null'],
           description: 'User email'
         }
       }

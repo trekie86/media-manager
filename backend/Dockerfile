@@ -18,6 +18,7 @@ RUN apt-get update \
 
 # Install uv
 RUN curl -LsSf https://astral.sh/uv/install.sh | sh
+ENV PATH="/root/.local/bin:$PATH"
 
 # Copy requirements files
 COPY requirements.in requirements-dev.in ./
@@ -25,7 +26,7 @@ COPY requirements.in requirements-dev.in ./
 # Generate and install dependencies
 RUN uv pip compile requirements.in -o requirements.txt && \
     uv pip compile requirements-dev.in -o requirements-dev.txt && \
-    uv pip install -r requirements-dev.txt
+    uv pip install --system -r requirements-dev.txt
 
 # Copy the rest of the application
 COPY . .

@@ -1,0 +1,7 @@
+@import "tailwindcss";
+@source "../node_modules/@skeletonlabs/skeleton-svelte/dist";
+
+/* Skeleton UI - use relative paths so @tailwindcss/vite can resolve them directly,
+   bypassing wildcard subpath export resolution which the CSS bundler doesn't support. */
+@import "../node_modules/@skeletonlabs/skeleton/src/themes/cerberus.css";
+@import "../node_modules/@skeletonlabs/skeleton/src/index.css";

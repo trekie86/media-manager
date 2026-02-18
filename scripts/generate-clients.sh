@@ -84,7 +84,8 @@ generate_typescript_client() {
         -g typescript-fetch \
         -o "${TYPESCRIPT_OUTPUT}" \
         -c openapi-generator-config.json \
-        --additional-properties=typescriptThreePlus=true,supportsES6=true,npmName=@trekie86/media-manager-client
+        --additional-properties=typescriptThreePlus=true,supportsES6=true,npmName=@trekie86/media-manager-client \
+        --verbose
     
     if [ $? -eq 0 ]; then
         log_success "TypeScript client generated in ${TYPESCRIPT_OUTPUT}"
@@ -114,7 +115,8 @@ generate_python_client() {
         -i "${OUTPUT_DIR}/openapi.json" \
         -g python \
         -o "${PYTHON_OUTPUT}" \
-        --additional-properties=packageName=media_manager_client,projectName=media-manager-python-client,packageVersion=1.0.0
+        --additional-properties=packageName=media_manager_client,projectName=media-manager-python-client,packageVersion=1.0.0 \
+        --verbose
     
     if [ $? -eq 0 ]; then
         log_success "Python client generated in ${PYTHON_OUTPUT}"

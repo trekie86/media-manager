@@ -8,7 +8,7 @@ anyio==4.9.0
     #   starlette
     #   watchfiles
 bcrypt==4.3.0
-    # via passlib
+    # via -r requirements.in
 certifi==2025.4.26
     # via
     #   httpcore
@@ -17,6 +17,11 @@ cffi==1.17.1
     # via cryptography
 click==8.2.1
     # via uvicorn
+colorama==0.4.6
+    # via
+    #   click
+    #   loguru
+    #   uvicorn
 cryptography==45.0.4
     # via python-jose
 dnspython==2.7.0
@@ -47,8 +52,6 @@ idna==3.10
 loguru==0.7.3
     # via -r requirements.in
 motor==3.7.1
-    # via -r requirements.in
-passlib==1.7.4
     # via -r requirements.in
 psutil==7.1.0
     # via -r requirements.in
@@ -103,9 +106,9 @@ typing-inspection==0.4.1
     #   pydantic-settings
 uvicorn==0.34.3
     # via -r requirements.in
-uvloop==0.21.0
-    # via uvicorn
 watchfiles==1.0.5
     # via uvicorn
 websockets==15.0.1
     # via uvicorn
+win32-setctime==1.2.0
+    # via loguru

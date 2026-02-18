@@ -117,6 +117,147 @@ async def list_movies(
         raise HTTPException(status_code=500, detail=f"Failed to list movies: {str(e)}")
 
 
+@router.get("/search", response_model=List[MovieResponse])
+async def search_movies(
+    q: str = Query(..., description="Search query for movie titles"),
+    skip: int = Query(0, ge=0, description="Number of movies to skip"),
+    limit: int = Query(100, ge=1, le=1000, description="Number of movies to return"),
+    storage_id: Optional[str] = Query(None, description="Filter by storage location"),
+    format: Optional[str] = Query(None, description="Filter by media format"),
+    genre: Optional[str] = Query(None, description="Filter by genre"),
+    db=Depends(get_database)
+) -> List[MovieResponse]:
+    """
+    Search movies by title with optional filtering.
+    Supports text search across movie titles and metadata.
+    """
+
+    # Build filter query with text search
+    filter_query: Dict[str, Any] = {
+        "$text": {"$search": q}
+    }
+
+    # Add additional filters
+    if storage_id:
+        try:
+            filter_query["storage_id"] = ObjectId(storage_id)
+        except Exception:
+            raise HTTPException(status_code=400, detail="Invalid storage_id format")
+
+    if format:
+        filter_query["format"] = format
+
+    if genre:
+        filter_query["genre"] = {"$in": [genre]}
+
+    try:
+        # Use text search with score sorting
+        cursor = db.movies.find(
+            filter_query,
+            {"score": {"$meta": "textScore"}}
+        ).sort([("score", {"$meta": "textScore"})]).skip(skip).limit(limit)
+
+        movies = await cursor.to_list(length=limit)
+
+        # Convert ObjectIds to strings for response
+        response_movies = []
+        for movie in movies:
+            response_data = {
+                "id": str(movie["_id"]),
+                "title": movie["title"],
+                "year": movie["year"],
+                "format": movie["format"],
+                "storage_id": str(movie["storage_id"]),
+                "tmdb_id": movie.get("tmdb_id"),
+                "genre": movie.get("genre"),
+                "runtime": movie.get("runtime"),
+                "cover_image": movie.get("cover_image")
+            }
+            response_movies.append(MovieResponse(**response_data))
+
+        return response_movies
+
+    except Exception as e:
+        # Fallback to regex search if text index doesn't exist
+        try:
+            filter_query: Dict[str, Any] = {
+                "title": {"$regex": q, "$options": "i"}
+            }
+
+            # Add additional filters
+            if storage_id:
+                try:
+                    filter_query["storage_id"] = ObjectId(storage_id)
+                except Exception:
+                    raise HTTPException(status_code=400, detail="Invalid storage_id format")
+
+            if format:
+                filter_query["format"] = format
+
+            if genre:
+                filter_query["genre"] = {"$in": [genre]}
+
+            cursor = db.movies.find(filter_query).skip(skip).limit(limit)
+            movies = await cursor.to_list(length=limit)
+
+            # Convert ObjectIds to strings for response
+            response_movies = []
+            for movie in movies:
+                response_data = {
+                    "id": str(movie["_id"]),
+                    "title": movie["title"],
+                    "year": movie["year"],
+                    "format": movie["format"],
+                    "storage_id": str(movie["storage_id"]),
+                    "tmdb_id": movie.get("tmdb_id"),
+                    "genre": movie.get("genre"),
+                    "runtime": movie.get("runtime"),
+                    "cover_image": movie.get("cover_image")
+                }
+                response_movies.append(MovieResponse(**response_data))
+
+            return response_movies
+
+        except Exception as fallback_e:
+            raise HTTPException(status_code=500, detail=f"Failed to search movies: {str(fallback_e)}")
+
+
+@router.get("/tmdb/search", response_model=Dict[str, Any])
+async def search_tmdb(
+    q: str = Query(..., description="Search query for TMDB movies"),
+    year: Optional[int] = Query(None, description="Filter by release year"),
+    page: int = Query(1, ge=1, le=1000, description="Page number for pagination"),
+    tmdb: TMDBService = Depends(get_tmdb_service)
+) -> Dict[str, Any]:
+    """
+    Search TMDB for movie information.
+    """
+    try:
+        results = await tmdb.search_movies(q, year=year, page=page)
+        return results
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"TMDB search failed: {str(e)}")
+
+
+@router.get("/tmdb/{tmdb_id}", response_model=Dict[str, Any])
+async def get_tmdb_movie(
+    tmdb_id: int,
+    tmdb: TMDBService = Depends(get_tmdb_service)
+) -> Dict[str, Any]:
+    """
+    Get detailed movie information from TMDB.
+    """
+    try:
+        movie_details = await tmdb.get_movie_details(tmdb_id)
+        if not movie_details:
+            raise HTTPException(status_code=404, detail="Movie not found in TMDB")
+        return movie_details
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to get TMDB movie: {str(e)}")
+
+
 @router.get("/{movie_id}", response_model=MovieResponse)
 async def get_movie(movie_id: str, db=Depends(get_database)) -> MovieResponse:
     """
@@ -247,147 +388,6 @@ async def delete_movie(movie_id: str, db=Depends(get_database)) -> None:
         raise
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Failed to delete movie: {str(e)}")
-
-
-@router.get("/search", response_model=List[MovieResponse])
-async def search_movies(
-    q: str = Query(..., description="Search query for movie titles"),
-    skip: int = Query(0, ge=0, description="Number of movies to skip"),
-    limit: int = Query(100, ge=1, le=1000, description="Number of movies to return"),
-    storage_id: Optional[str] = Query(None, description="Filter by storage location"),
-    format: Optional[str] = Query(None, description="Filter by media format"),
-    genre: Optional[str] = Query(None, description="Filter by genre"),
-    db=Depends(get_database)
-) -> List[MovieResponse]:
-    """
-    Search movies by title with optional filtering.
-    Supports text search across movie titles and metadata.
-    """
-    
-    # Build filter query with text search
-    filter_query: Dict[str, Any] = {
-        "$text": {"$search": q}
-    }
-    
-    # Add additional filters
-    if storage_id:
-        try:
-            filter_query["storage_id"] = ObjectId(storage_id)
-        except Exception:
-            raise HTTPException(status_code=400, detail="Invalid storage_id format")
-    
-    if format:
-        filter_query["format"] = format
-    
-    if genre:
-        filter_query["genre"] = {"$in": [genre]}
-    
-    try:
-        # Use text search with score sorting
-        cursor = db.movies.find(
-            filter_query,
-            {"score": {"$meta": "textScore"}}
-        ).sort([("score", {"$meta": "textScore"})]).skip(skip).limit(limit)
-        
-        movies = await cursor.to_list(length=limit)
-        
-        # Convert ObjectIds to strings for response
-        response_movies = []
-        for movie in movies:
-            response_data = {
-                "id": str(movie["_id"]),
-                "title": movie["title"],
-                "year": movie["year"],
-                "format": movie["format"],
-                "storage_id": str(movie["storage_id"]),
-                "tmdb_id": movie.get("tmdb_id"),
-                "genre": movie.get("genre"),
-                "runtime": movie.get("runtime"),
-                "cover_image": movie.get("cover_image")
-            }
-            response_movies.append(MovieResponse(**response_data))
-        
-        return response_movies
-        
-    except Exception as e:
-        # Fallback to regex search if text index doesn't exist
-        try:
-            filter_query: Dict[str, Any] = {
-                "title": {"$regex": q, "$options": "i"}
-            }
-            
-            # Add additional filters
-            if storage_id:
-                try:
-                    filter_query["storage_id"] = ObjectId(storage_id)
-                except Exception:
-                    raise HTTPException(status_code=400, detail="Invalid storage_id format")
-            
-            if format:
-                filter_query["format"] = format
-            
-            if genre:
-                filter_query["genre"] = {"$in": [genre]}
-            
-            cursor = db.movies.find(filter_query).skip(skip).limit(limit)
-            movies = await cursor.to_list(length=limit)
-            
-            # Convert ObjectIds to strings for response
-            response_movies = []
-            for movie in movies:
-                response_data = {
-                    "id": str(movie["_id"]),
-                    "title": movie["title"],
-                    "year": movie["year"],
-                    "format": movie["format"],
-                    "storage_id": str(movie["storage_id"]),
-                    "tmdb_id": movie.get("tmdb_id"),
-                    "genre": movie.get("genre"),
-                    "runtime": movie.get("runtime"),
-                    "cover_image": movie.get("cover_image")
-                }
-                response_movies.append(MovieResponse(**response_data))
-            
-            return response_movies
-            
-        except Exception as fallback_e:
-            raise HTTPException(status_code=500, detail=f"Failed to search movies: {str(fallback_e)}")
-
-
-@router.get("/tmdb/search", response_model=Dict[str, Any])
-async def search_tmdb(
-    q: str = Query(..., description="Search query for TMDB movies"),
-    year: Optional[int] = Query(None, description="Filter by release year"),
-    page: int = Query(1, ge=1, le=1000, description="Page number for pagination"),
-    tmdb: TMDBService = Depends(get_tmdb_service)
-) -> Dict[str, Any]:
-    """
-    Search TMDB for movie information.
-    """
-    try:
-        results = await tmdb.search_movies(q, year=year, page=page)
-        return results
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"TMDB search failed: {str(e)}")
-
-
-@router.get("/tmdb/{tmdb_id}", response_model=Dict[str, Any])
-async def get_tmdb_movie(
-    tmdb_id: int,
-    tmdb: TMDBService = Depends(get_tmdb_service)
-) -> Dict[str, Any]:
-    """
-    Get detailed movie information from TMDB.
-    """
-    try:
-        movie_details = await tmdb.get_movie_details(tmdb_id)
-        if not movie_details:
-            raise HTTPException(status_code=404, detail="Movie not found in TMDB")
-        return movie_details
-    except HTTPException:
-        raise
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Failed to get TMDB movie: {str(e)}")
 
 
 @router.post("/{movie_id}/enrich", response_model=MovieResponse)
