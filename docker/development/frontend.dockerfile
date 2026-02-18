@@ -1,21 +1,27 @@
 # Use Node.js LTS (Long Term Support) as base image
 FROM node:20-slim
 
-# Set working directory
-WORKDIR /app
+# Set working directory to workspace root (needed for pnpm workspace)
+WORKDIR /workspace
 
 # Install pnpm globally
 RUN npm install -g pnpm
 
-# Copy package files
-COPY package*.json ./
+# Copy workspace and lock files first for layer caching
+COPY pnpm-workspace.yaml ./
 COPY pnpm-lock.yaml ./
 
-# Install dependencies
-RUN pnpm install
+# Copy frontend package manifest
+COPY frontend/package.json ./frontend/
 
-# Copy the rest of the application
-COPY . .
+# Install only frontend dependencies
+RUN pnpm install --filter frontend --frozen-lockfile
+
+# Copy the frontend source
+COPY frontend/ ./frontend/
+
+# Run dev server from within the frontend package
+WORKDIR /workspace/frontend
 
 # Expose port 3000
 EXPOSE 3000
