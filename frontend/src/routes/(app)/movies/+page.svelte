@@ -16,13 +16,14 @@
 		type MovieFormat,
 		type TmdbMovie
 	} from '$lib/api/movies';
-	import { listStorage, type Storage } from '$lib/api/storage';
+	import { listStorage, buildTree, type Storage, type StorageNode } from '$lib/api/storage';
 	import { ApiError } from '$lib/api/client';
 	import { toast } from '$lib/stores/toast';
 
 	// ── State ────────────────────────────────────────────────────────────────
 	let movies = $state<Movie[]>([]);
 	let storageList = $state<Storage[]>([]);
+	let storageTree = $state<StorageNode[]>([]);
 	let loading = $state(true);
 	let error = $state('');
 
@@ -30,9 +31,32 @@
 	let filterFormat = $state('');
 	let filterStorage = $state('');
 	let filterGenre = $state('');
+	// When a storage filter is active, include movies from descendant nodes by default.
+	// This can be seeded from the URL param (e.g. when navigating from the storage page).
+	let filterIncludeDescendants = $state(true);
 
 	// Search
 	let searchQuery = $state($page.url.searchParams.get('q') ?? '');
+
+	// Flatten tree into depth-ordered list for dropdown (preserves hierarchy visually)
+	function flattenTree(nodes: StorageNode[], depth = 0): { storage: Storage; depth: number }[] {
+		const result: { storage: Storage; depth: number }[] = [];
+		for (const node of nodes) {
+			result.push({ storage: node, depth });
+			if (node.children.length > 0) {
+				result.push(...flattenTree(node.children, depth + 1));
+			}
+		}
+		return result;
+	}
+
+	// Reactive flattened storage list ordered by hierarchy for the dropdown
+	let storageOptions = $derived(flattenTree(storageTree));
+
+	// Whether the currently selected storage has children (i.e., descendants exist)
+	let selectedStorageHasChildren = $derived(
+		filterStorage ? storageList.some((s) => s.path.includes(filterStorage)) : false
+	);
 
 	// Modal state
 	let showModal = $state(false);
@@ -60,6 +84,17 @@
 
 	// ── Lifecycle ────────────────────────────────────────────────────────────
 	onMount(async () => {
+		// Restore storage filter from URL (e.g. when arriving from the storage page).
+		// include_descendants defaults to true; the storage page passes 'false' explicitly
+		// when the user had the toggle off.
+		const urlStorageId = $page.url.searchParams.get('storage_id') ?? '';
+		const urlDescendantsParam = $page.url.searchParams.get('include_descendants');
+		if (urlStorageId) {
+			filterStorage = urlStorageId;
+			if (urlDescendantsParam !== null) {
+				filterIncludeDescendants = urlDescendantsParam === 'true';
+			}
+		}
 		await Promise.all([loadMovies(), loadStorage()]);
 	});
 
@@ -80,6 +115,7 @@
 			const filters = {
 				format: filterFormat || undefined,
 				storage_id: filterStorage || undefined,
+				include_descendants: filterStorage ? filterIncludeDescendants : undefined,
 				genre: filterGenre || undefined,
 				limit: 200
 			};
@@ -98,6 +134,7 @@
 	async function loadStorage() {
 		try {
 			storageList = await listStorage({ limit: 500 });
+			storageTree = buildTree(storageList);
 		} catch {
 			// Non-critical
 		}
@@ -299,16 +336,23 @@
 			{/each}
 		</select>
 
-		<select
-			bind:value={filterStorage}
-			onchange={applyFilters}
-			class="text-sm px-3 py-1.5 rounded-lg border border-surface-200 dark:border-surface-600 bg-surface-50 dark:bg-surface-700 text-surface-700 dark:text-surface-300"
-		>
-			<option value="">All Storage</option>
-			{#each storageList as s}
-				<option value={s.id}>{s.name}</option>
-			{/each}
-		</select>
+		<div class="flex flex-col gap-1">
+			<select
+				bind:value={filterStorage}
+				onchange={applyFilters}
+				class="text-sm px-3 py-1.5 rounded-lg border border-surface-200 dark:border-surface-600 bg-surface-50 dark:bg-surface-700 text-surface-700 dark:text-surface-300"
+			>
+				<option value="">All Storage</option>
+				{#each storageOptions as { storage, depth }}
+					<option value={storage.id}>
+						{#if depth > 0}{' '.repeat(depth * 2)}└ {/if}{storage.name}
+					</option>
+				{/each}
+			</select>
+			{#if filterStorage && selectedStorageHasChildren && filterIncludeDescendants}
+				<span class="text-xs text-primary-500 px-1">includes sub-locations</span>
+			{/if}
+		</div>
 
 		<input
 			type="text"

@@ -24,6 +24,7 @@
 	let selectedNode = $state<Storage | null>(null);
 	let selectedMovies = $state<Movie[]>([]);
 	let moviesLoading = $state(false);
+	let includeDescendants = $state(true);
 
 	// Modal
 	let showModal = $state(false);
@@ -67,15 +68,34 @@
 
 	async function selectNode(node: Storage) {
 		selectedNode = node;
+		await reloadMovies();
+	}
+
+	async function reloadMovies() {
+		if (!selectedNode) return;
 		moviesLoading = true;
 		selectedMovies = [];
 		try {
-			selectedMovies = await listMovies({ storage_id: node.id, limit: 200 });
+			selectedMovies = await listMovies({
+				storage_id: selectedNode.id,
+				include_descendants: includeDescendants,
+				limit: 200
+			});
 		} catch {
 			selectedMovies = [];
 		} finally {
 			moviesLoading = false;
 		}
+	}
+
+	// Recompute: does the selected node have any descendants?
+	let selectedHasChildren = $derived(
+		selectedNode ? storageList.some((s) => s.path.includes(selectedNode!.id)) : false
+	);
+
+	// For a movie, find its direct storage name (may differ from selectedNode when including descendants)
+	function movieStorageName(storageId: string): string {
+		return storageList.find((s) => s.id === storageId)?.name ?? '';
 	}
 
 	// ── Modal helpers ─────────────────────────────────────────────────────────
@@ -341,14 +361,27 @@
 				<!-- Movies in this storage -->
 				<div>
 					<div class="flex items-center justify-between mb-3">
-						<h3 class="font-semibold text-surface-800 dark:text-surface-200">
-							Movies
-							{#if selectedMovies.length > 0}
-								<span class="ml-1 text-sm font-normal text-surface-400">({selectedMovies.length})</span>
+						<div class="flex items-center gap-3 flex-wrap">
+							<h3 class="font-semibold text-surface-800 dark:text-surface-200">
+								Movies
+								{#if selectedMovies.length > 0}
+									<span class="ml-1 text-sm font-normal text-surface-400">({selectedMovies.length})</span>
+								{/if}
+							</h3>
+							{#if selectedHasChildren}
+								<label class="flex items-center gap-1.5 cursor-pointer select-none">
+									<input
+										type="checkbox"
+										bind:checked={includeDescendants}
+										onchange={reloadMovies}
+										class="w-3.5 h-3.5 rounded accent-primary-500"
+									/>
+									<span class="text-xs text-surface-500">include sub-locations</span>
+								</label>
 							{/if}
-						</h3>
+						</div>
 						<a
-							href="/movies?storage_id={selectedNode.id}"
+							href="/movies?storage_id={selectedNode.id}&include_descendants={includeDescendants && selectedHasChildren ? 'true' : 'false'}"
 							class="text-xs text-primary-500 hover:underline"
 						>
 							View all →
@@ -361,7 +394,11 @@
 						</div>
 					{:else if selectedMovies.length === 0}
 						<div class="text-center py-8 border border-dashed border-surface-200 dark:border-surface-700 rounded-xl text-surface-400">
-							<p class="text-sm">No movies in this location</p>
+							<p class="text-sm">
+								{includeDescendants && selectedHasChildren
+									? 'No movies in this location or its sub-locations'
+									: 'No movies directly in this location'}
+							</p>
 						</div>
 					{:else}
 						<div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
@@ -377,6 +414,11 @@
 									<div class="p-2">
 										<p class="text-xs font-semibold text-surface-900 dark:text-surface-50 line-clamp-2 leading-tight">{movie.title}</p>
 										<p class="text-xs text-surface-400">{movie.year} · {movie.format}</p>
+										{#if includeDescendants && movie.storage_id !== selectedNode.id}
+											<p class="text-xs text-surface-400 mt-0.5 truncate" title={movieStorageName(movie.storage_id)}>
+												📦 {movieStorageName(movie.storage_id)}
+											</p>
+										{/if}
 									</div>
 								</div>
 							{/each}

@@ -40,6 +40,7 @@ export interface MovieFilters {
 	skip?: number;
 	limit?: number;
 	storage_id?: string;
+	include_descendants?: boolean;
 	format?: string;
 	genre?: string;
 }
@@ -72,6 +73,7 @@ export async function listMovies(filters: MovieFilters = {}): Promise<Movie[]> {
 	if (filters.skip != null) params.set('skip', String(filters.skip));
 	if (filters.limit != null) params.set('limit', String(filters.limit));
 	if (filters.storage_id) params.set('storage_id', filters.storage_id);
+	if (filters.include_descendants) params.set('include_descendants', 'true');
 	if (filters.format) params.set('format', filters.format);
 	if (filters.genre) params.set('genre', filters.genre);
 	const qs = params.toString();
@@ -83,6 +85,7 @@ export async function searchMovies(q: string, filters: MovieFilters = {}): Promi
 	if (filters.skip != null) params.set('skip', String(filters.skip));
 	if (filters.limit != null) params.set('limit', String(filters.limit));
 	if (filters.storage_id) params.set('storage_id', filters.storage_id);
+	if (filters.include_descendants) params.set('include_descendants', 'true');
 	if (filters.format) params.set('format', filters.format);
 	if (filters.genre) params.set('genre', filters.genre);
 	return request<Movie[]>(`/api/movies/search?${params.toString()}`);
