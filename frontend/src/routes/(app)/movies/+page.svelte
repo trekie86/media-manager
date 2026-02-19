@@ -10,6 +10,7 @@
 		deleteMovie,
 		enrichMovie,
 		searchTmdb,
+		getTmdbMovie,
 		type Movie,
 		type MovieCreate,
 		type MovieFormat,
@@ -160,7 +161,7 @@
 		}
 	}
 
-	function applyTmdbResult(t: TmdbMovie) {
+	async function applyTmdbResult(t: TmdbMovie) {
 		formTitle = t.title;
 		const year = t.release_date?.split('-')[0];
 		if (year) formYear = Number(year);
@@ -170,6 +171,16 @@
 		formTmdbId = t.id;
 		tmdbResults = [];
 		tmdbQuery = '';
+
+		// Fetch full details to pre-populate runtime and genres
+		try {
+			const details = await getTmdbMovie(t.id);
+			if (details.runtime) formRuntime = details.runtime;
+			if (details.genre_names?.length) formGenre = details.genre_names.join(', ');
+			if (details.poster_url && !formCoverImage) formCoverImage = details.poster_url;
+		} catch {
+			// Non-critical — fields can be filled manually or enriched after save
+		}
 	}
 
 	// ── Save / delete ─────────────────────────────────────────────────────────
@@ -388,7 +399,7 @@
 							>
 								🗑️
 							</button>
-							{#if !movie.tmdb_id}
+							{#if movie.tmdb_id}
 								<button
 									onclick={() => handleEnrich(movie)}
 									class="p-2 rounded-lg bg-white/20 hover:bg-white/30 text-white transition-colors text-sm"
