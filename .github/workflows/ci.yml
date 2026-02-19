@@ -28,7 +28,7 @@ jobs:
           cache-dependency-glob: "backend/requirements*.in"
 
       - name: Install dev dependencies
-        run: uv pip install --system -r requirements-dev.in
+        run: uv pip install -r requirements-dev.in
 
       - name: flake8
         run: python -m flake8 app/
@@ -63,7 +63,7 @@ jobs:
           cache-dependency-glob: "backend/requirements*.in"
 
       - name: Install dev dependencies
-        run: uv pip install --system -r requirements-dev.in
+        run: uv pip install -r requirements-dev.in
 
       - name: Run unit tests
         run: pytest tests/unit/ -v
