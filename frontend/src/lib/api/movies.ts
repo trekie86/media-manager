@@ -61,6 +61,12 @@ export interface TmdbMovie {
 	genre_ids?: number[];
 }
 
+export interface TmdbMovieDetails extends TmdbMovie {
+	runtime?: number;
+	genre_names?: string[];
+	poster_url?: string;
+}
+
 export async function listMovies(filters: MovieFilters = {}): Promise<Movie[]> {
 	const params = new URLSearchParams();
 	if (filters.skip != null) params.set('skip', String(filters.skip));
@@ -102,6 +108,10 @@ export async function updateMovie(id: string, data: MovieUpdate): Promise<Movie>
 
 export async function deleteMovie(id: string): Promise<void> {
 	return request<void>(`/api/movies/${id}`, { method: 'DELETE' });
+}
+
+export async function getTmdbMovie(tmdbId: number): Promise<TmdbMovieDetails> {
+	return request<TmdbMovieDetails>(`/api/movies/tmdb/${tmdbId}`);
 }
 
 export async function searchTmdb(q: string, year?: number): Promise<TmdbSearchResult> {

@@ -1,3 +1,6 @@
 packages:
-  - 'frontend'
-  - 'generated/typescript-client'
+  - frontend
+  - generated/typescript-client
+
+onlyBuiltDependencies:
+  - esbuild

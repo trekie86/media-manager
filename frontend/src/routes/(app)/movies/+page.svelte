@@ -10,6 +10,7 @@
 		deleteMovie,
 		enrichMovie,
 		searchTmdb,
+		getTmdbMovie,
 		type Movie,
 		type MovieCreate,
 		type MovieFormat,
@@ -48,6 +49,7 @@
 	let formGenre = $state('');
 	let formRuntime = $state<number | ''>('');
 	let formCoverImage = $state('');
+	let formTmdbId = $state<number | undefined>(undefined);
 
 	// TMDB search inside modal
 	let tmdbQuery = $state('');
@@ -115,6 +117,7 @@
 		formGenre = '';
 		formRuntime = '';
 		formCoverImage = '';
+		formTmdbId = undefined;
 		tmdbQuery = '';
 		tmdbResults = [];
 		modalError = '';
@@ -130,6 +133,7 @@
 		formGenre = m.genre?.join(', ') ?? '';
 		formRuntime = m.runtime ?? '';
 		formCoverImage = m.cover_image ?? '';
+		formTmdbId = m.tmdb_id;
 		tmdbQuery = '';
 		tmdbResults = [];
 		modalError = '';
@@ -157,15 +161,26 @@
 		}
 	}
 
-	function applyTmdbResult(t: TmdbMovie) {
+	async function applyTmdbResult(t: TmdbMovie) {
 		formTitle = t.title;
 		const year = t.release_date?.split('-')[0];
 		if (year) formYear = Number(year);
 		if (t.poster_path) {
 			formCoverImage = `https://image.tmdb.org/t/p/w500${t.poster_path}`;
 		}
+		formTmdbId = t.id;
 		tmdbResults = [];
 		tmdbQuery = '';
+
+		// Fetch full details to pre-populate runtime and genres
+		try {
+			const details = await getTmdbMovie(t.id);
+			if (details.runtime) formRuntime = details.runtime;
+			if (details.genre_names?.length) formGenre = details.genre_names.join(', ');
+			if (details.poster_url && !formCoverImage) formCoverImage = details.poster_url;
+		} catch {
+			// Non-critical — fields can be filled manually or enriched after save
+		}
 	}
 
 	// ── Save / delete ─────────────────────────────────────────────────────────
@@ -185,6 +200,7 @@
 				year: Number(formYear),
 				format: formFormat,
 				storage_id: formStorageId,
+				tmdb_id: formTmdbId,
 				genre: formGenre ? formGenre.split(',').map((g) => g.trim()).filter(Boolean) : undefined,
 				runtime: formRuntime !== '' ? Number(formRuntime) : undefined,
 				cover_image: formCoverImage.trim() || undefined
@@ -230,6 +246,13 @@
 		} catch {
 			toast.error('TMDB enrichment failed — check your API key');
 		}
+	}
+
+	function formatRuntime(minutes: number): string {
+		if (minutes < 60) return `${minutes}m`;
+		const h = Math.floor(minutes / 60);
+		const m = minutes % 60;
+		return m > 0 ? `${h}h ${m}m` : `${h}h`;
 	}
 
 	// ── Filter apply ──────────────────────────────────────────────────────────
@@ -376,7 +399,7 @@
 							>
 								🗑️
 							</button>
-							{#if !movie.tmdb_id}
+							{#if movie.tmdb_id}
 								<button
 									onclick={() => handleEnrich(movie)}
 									class="p-2 rounded-lg bg-white/20 hover:bg-white/30 text-white transition-colors text-sm"
@@ -402,6 +425,18 @@
 								{storageName(movie.storage_id)}
 							</span>
 						</div>
+						{#if movie.runtime}
+							<p class="text-xs text-surface-400 mt-1">{formatRuntime(movie.runtime)}</p>
+						{/if}
+						{#if movie.genre && movie.genre.length > 0}
+							<div class="flex flex-wrap gap-1 mt-1.5">
+								{#each movie.genre.slice(0, 2) as g}
+									<span class="text-xs px-1.5 py-0.5 rounded-full bg-primary-100 dark:bg-primary-900 text-primary-700 dark:text-primary-300">
+										{g}
+									</span>
+								{/each}
+							</div>
+						{/if}
 					</div>
 				</div>
 			{/each}

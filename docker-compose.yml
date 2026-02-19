@@ -1,13 +1,14 @@
 services:
   frontend:
     build:
-      context: ./frontend
-      dockerfile: ../docker/development/frontend.dockerfile
+      context: .
+      dockerfile: docker/development/frontend.dockerfile
     ports:
       - "3000:3000"
     volumes:
-      - ./frontend:/app
-      - /app/node_modules
+      - ./frontend:/workspace/frontend
+      - /workspace/node_modules
+      - /workspace/frontend/node_modules
     environment:
       - NODE_ENV=development
     env_file:
