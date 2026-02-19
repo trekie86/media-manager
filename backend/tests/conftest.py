@@ -3,6 +3,7 @@ Global pytest fixtures and test utilities.
 """
 import asyncio
 from typing import AsyncGenerator, Generator
+from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 from fastapi import FastAPI
@@ -11,6 +12,7 @@ from motor.motor_asyncio import AsyncIOMotorClient, AsyncIOMotorDatabase
 
 from app.core.config import get_settings
 from app.db.connection import get_database
+from app.services.tmdb import get_tmdb_service
 
 # Settings fixture
 @pytest.fixture
@@ -55,22 +57,33 @@ async def test_db(db_client, settings) -> AsyncGenerator[AsyncIOMotorDatabase, N
     finally:
         await close_mongo_connection()
 
+@pytest.fixture
+def mock_tmdb_service():
+    """Mock TMDB service that makes no live API calls."""
+    service = MagicMock()
+    service.get_movie_details = AsyncMock(return_value=None)
+    service.search_movies = AsyncMock(return_value={"results": [], "total_results": 0, "total_pages": 0})
+    service.enrich_movie_data = AsyncMock(side_effect=lambda d: d)
+    return service
+
+
 # FastAPI test client fixtures
 @pytest.fixture
-def app(test_db) -> FastAPI:
+def app(test_db, mock_tmdb_service) -> FastAPI:
     """Create a test FastAPI application."""
     from app.main import app
-    
+
     async def override_get_database():
         yield test_db
-    
+
     app.dependency_overrides[get_database] = override_get_database
+    app.dependency_overrides[get_tmdb_service] = lambda: mock_tmdb_service
     return app
 
 @pytest.fixture
 async def client(app) -> AsyncGenerator[AsyncClient, None]:
     """Create an async test client for FastAPI endpoints."""
-    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://localhost") as client:
         yield client
 
 # Auth fixtures

@@ -1,6 +1,7 @@
 """Integration tests for movie routes."""
 import pytest
 from bson import ObjectId
+from unittest.mock import AsyncMock
 
 from app.models.movie import MediaFormat
 
@@ -425,6 +426,117 @@ async def test_delete_movie_not_found(client):
 async def test_delete_movie_invalid_id(client):
     """Test deleting movie with invalid ID format."""
     response = await client.delete("/api/movies/invalid_id")
-    
+
     assert response.status_code == 400
     assert "Invalid movie ID format" in response.json()["detail"]
+
+
+# ── TMDB auto-enrichment tests ─────────────────────────────────────────────
+
+async def test_create_movie_auto_enriches_from_tmdb(client, sample_storage, mock_tmdb_service):
+    """Movie with tmdb_id and no genre/runtime/cover gets auto-enriched from TMDB."""
+    mock_tmdb_service.get_movie_details = AsyncMock(return_value={
+        "genre_names": ["Action", "Sci-Fi"],
+        "runtime": 136,
+        "poster_url": "https://tmdb.example.com/poster.jpg"
+    })
+
+    payload = {
+        "title": "The Matrix",
+        "year": 1999,
+        "format": MediaFormat.BLURAY.value,
+        "storage_id": sample_storage,
+        "tmdb_id": 603
+    }
+    response = await client.post("/api/movies/", json=payload)
+
+    assert response.status_code == 201
+    data = response.json()
+    assert data["genre"] == ["Action", "Sci-Fi"]
+    assert data["runtime"] == 136
+    assert data["cover_image"] == "https://tmdb.example.com/poster.jpg"
+    mock_tmdb_service.get_movie_details.assert_called_once_with(603)
+
+
+async def test_create_movie_tmdb_does_not_overwrite_manual_fields(client, sample_storage, mock_tmdb_service):
+    """Manually supplied fields are preserved even when TMDB returns data."""
+    mock_tmdb_service.get_movie_details = AsyncMock(return_value={
+        "genre_names": ["Action", "Sci-Fi"],
+        "runtime": 136,
+        "poster_url": "https://tmdb.example.com/poster.jpg"
+    })
+
+    payload = {
+        "title": "The Matrix",
+        "year": 1999,
+        "format": MediaFormat.BLURAY.value,
+        "storage_id": sample_storage,
+        "tmdb_id": 603,
+        "genre": ["Drama"],
+        "runtime": 200,
+        "cover_image": "https://manual.example.com/poster.jpg"
+    }
+    response = await client.post("/api/movies/", json=payload)
+
+    assert response.status_code == 201
+    data = response.json()
+    # Manual values should be preserved
+    assert data["genre"] == ["Drama"]
+    assert data["runtime"] == 200
+    assert data["cover_image"] == "https://manual.example.com/poster.jpg"
+    # TMDB should not be called because all enrichable fields are already set
+    mock_tmdb_service.get_movie_details.assert_not_called()
+
+
+async def test_create_movie_succeeds_when_tmdb_fails(client, sample_storage, mock_tmdb_service):
+    """Movie creation succeeds gracefully even when TMDB raises an exception."""
+    mock_tmdb_service.get_movie_details = AsyncMock(side_effect=Exception("TMDB API down"))
+
+    payload = {
+        "title": "The Matrix",
+        "year": 1999,
+        "format": MediaFormat.BLURAY.value,
+        "storage_id": sample_storage,
+        "tmdb_id": 603
+    }
+    response = await client.post("/api/movies/", json=payload)
+
+    assert response.status_code == 201
+    data = response.json()
+    assert data["title"] == "The Matrix"
+    # Enrichable fields absent because TMDB failed
+    assert data["genre"] is None
+    assert data["runtime"] is None
+    assert data["cover_image"] is None
+
+
+async def test_create_movie_without_tmdb_id_skips_enrichment(client, sample_storage, mock_tmdb_service):
+    """TMDB is never called when no tmdb_id is provided."""
+    payload = {
+        "title": "Minimal Movie",
+        "year": 2020,
+        "format": MediaFormat.DVD.value,
+        "storage_id": sample_storage
+    }
+    response = await client.post("/api/movies/", json=payload)
+
+    assert response.status_code == 201
+    mock_tmdb_service.get_movie_details.assert_not_called()
+
+
+async def test_create_movie_all_fields_set_skips_tmdb(client, sample_storage, mock_tmdb_service):
+    """TMDB is not called when genre, runtime, and cover_image are all already provided."""
+    payload = {
+        "title": "The Matrix",
+        "year": 1999,
+        "format": MediaFormat.BLURAY.value,
+        "storage_id": sample_storage,
+        "tmdb_id": 603,
+        "genre": ["Action"],
+        "runtime": 136,
+        "cover_image": "https://example.com/poster.jpg"
+    }
+    response = await client.post("/api/movies/", json=payload)
+
+    assert response.status_code == 201
+    mock_tmdb_service.get_movie_details.assert_not_called()
