@@ -19,7 +19,7 @@ class MongoModel(BaseModel):
         },
         populate_by_name=True
     )
-    
+
     id: Optional[str] = None
 
     def dict(self, *args, **kwargs):

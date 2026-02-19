@@ -10,21 +10,27 @@ T = TypeVar('T')
 
 class ErrorDetail(BaseModel):
     """Individual error detail."""
-    
+
     type: str = Field(..., description="Error type identifier")
     message: str = Field(..., description="Human-readable error message")
-    field: Optional[str] = Field(None, description="Field name if error is field-specific")
+    field: Optional[str] = Field(
+        None, description="Field name if error is field-specific"
+    )
 
 
 class ErrorResponse(BaseModel):
     """Standardized error response format."""
-    
+
     success: bool = Field(False, description="Always false for error responses")
     error: str = Field(..., description="Error category or type")
     message: str = Field(..., description="Primary error message")
-    details: Optional[List[ErrorDetail]] = Field(None, description="Detailed error information")
-    request_id: Optional[str] = Field(None, description="Request identifier for debugging")
-    
+    details: Optional[List[ErrorDetail]] = Field(
+        None, description="Detailed error information"
+    )
+    request_id: Optional[str] = Field(
+        None, description="Request identifier for debugging"
+    )
+
     class Config:
         json_schema_extra = {
             "examples": [
@@ -52,11 +58,11 @@ class ErrorResponse(BaseModel):
 
 class SuccessResponse(BaseModel, Generic[T]):
     """Standardized success response format."""
-    
+
     success: bool = Field(True, description="Always true for success responses")
     data: T = Field(..., description="Response data")
     message: Optional[str] = Field(None, description="Optional success message")
-    
+
     class Config:
         json_schema_extra = {
             "examples": [
@@ -71,14 +77,14 @@ class SuccessResponse(BaseModel, Generic[T]):
 
 class PaginationMeta(BaseModel):
     """Pagination metadata."""
-    
+
     page: int = Field(..., description="Current page number (1-based)")
     per_page: int = Field(..., description="Items per page")
     total_items: int = Field(..., description="Total number of items")
     total_pages: int = Field(..., description="Total number of pages")
     has_next: bool = Field(..., description="Whether there are more pages")
     has_prev: bool = Field(..., description="Whether there are previous pages")
-    
+
     class Config:
         json_schema_extra = {
             "example": {
@@ -94,12 +100,12 @@ class PaginationMeta(BaseModel):
 
 class PaginatedResponse(BaseModel, Generic[T]):
     """Standardized paginated response format."""
-    
+
     success: bool = Field(True, description="Always true for success responses")
     data: List[T] = Field(..., description="Array of items for current page")
     pagination: PaginationMeta = Field(..., description="Pagination metadata")
     message: Optional[str] = Field(None, description="Optional success message")
-    
+
     class Config:
         json_schema_extra = {
             "example": {
@@ -122,13 +128,15 @@ class PaginatedResponse(BaseModel, Generic[T]):
 
 class HealthResponse(BaseModel):
     """Health check response."""
-    
+
     status: str = Field(..., description="Service health status")
     version: str = Field(..., description="API version")
     env: str = Field(..., description="Environment name")
     timestamp: Optional[str] = Field(None, description="Response timestamp")
-    checks: Optional[Dict[str, Any]] = Field(None, description="Individual health check results")
-    
+    checks: Optional[Dict[str, Any]] = Field(
+        None, description="Individual health check results"
+    )
+
     class Config:
         json_schema_extra = {
             "example": {
@@ -141,10 +149,10 @@ class HealthResponse(BaseModel):
 
 class MessageResponse(BaseModel):
     """Simple message response."""
-    
+
     success: bool = Field(True, description="Operation success status")
     message: str = Field(..., description="Response message")
-    
+
     class Config:
         json_schema_extra = {
             "example": {

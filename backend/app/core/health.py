@@ -3,9 +3,7 @@ Health check utilities for monitoring application dependencies.
 """
 import psutil
 from typing import Dict, Any
-from motor.motor_asyncio import AsyncIOMotorDatabase
 
-from app.db.connection import get_database
 from app.services.tmdb import get_tmdb_service
 
 
@@ -16,7 +14,7 @@ async def check_database_health() -> bool:
         from app.db.connection import client
         if client is None:
             return False
-        
+
         # Ping using the admin database
         result = await client.admin.command("ping")
         return result.get("ok") == 1.0
@@ -31,7 +29,7 @@ async def check_tmdb_health() -> bool:
         tmdb_service = get_tmdb_service()
         if not tmdb_service:
             return False
-        
+
         # Make a simple API call to verify connectivity
         # This assumes your TMDB service has a health check method
         # Adjust based on your actual TMDB service implementation

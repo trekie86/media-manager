@@ -8,11 +8,13 @@ from pydantic import Field, EmailStr, field_validator
 
 from .base import MongoModel
 
+
 # Auth specific models
 class TokenResponse(MongoModel):
     """Authentication token response model."""
     access_token: str = Field(..., description="JWT access token")
     token_type: str = Field("bearer", description="Token type")
+
 
 class UserLogin(MongoModel):
     """User login request model."""
@@ -32,7 +34,9 @@ class UserCreate(UserBase):
     """
     Model for creating a new user.
     """
-    password: str = Field(..., min_length=8, description="User password (will be hashed)")
+    password: str = Field(
+        ..., min_length=8, description="User password (will be hashed)"
+    )
 
     @field_validator("username")
     def validate_username(cls, v: str) -> str:
@@ -40,7 +44,9 @@ class UserCreate(UserBase):
         if len(v) < 3:
             raise ValueError("Username must be at least 3 characters long")
         if not re.match(r"^[a-zA-Z0-9_-]+$", v):
-            raise ValueError("Username can only contain letters, numbers, underscores, and hyphens")
+            raise ValueError(
+                "Username can only contain letters, numbers, underscores, and hyphens"
+            )
         return v
 
     @field_validator("password")

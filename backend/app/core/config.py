@@ -1,7 +1,6 @@
 """
 Application configuration and settings.
 """
-import os
 from functools import lru_cache
 from typing import List, Union
 
@@ -17,7 +16,7 @@ class Settings(BaseSettings):
     PROJECT_NAME: str = "Media Manager API"
     VERSION: str = "0.1.0"
     API_V1_STR: str = "/api/v1"
-    
+
     # Model configuration
     model_config = SettingsConfigDict(
         env_file=".env",
@@ -25,9 +24,9 @@ class Settings(BaseSettings):
         case_sensitive=True,
         extra="ignore"
     )
-    
+
     ENVIRONMENT: str = "development"
-    
+
     # CORS
     CORS_ORIGINS: Union[str, List[str]] = ["http://localhost:3000"]
 
@@ -36,37 +35,38 @@ class Settings(BaseSettings):
     def parse_cors_origins(cls, v: Union[str, List[str]]) -> List[str]:
         """
         Parse CORS_ORIGINS from string or list.
-        Example: "http://localhost:3000,http://localhost:8000" -> ["http://localhost:3000", "http://localhost:8000"]
+        Example: "http://localhost:3000,http://localhost:8000"
+        -> ["http://localhost:3000", "http://localhost:8000"]
         """
         if isinstance(v, str):
             return [origin.strip() for origin in v.split(",")]
         return v
-    
+
     # Server Configuration
     HOST: str = "0.0.0.0"
     PORT: int = 8000
     RELOAD: bool = True
-    
+
     # MongoDB Configuration
     MONGO_HOST: str = "mongodb"
     MONGO_PORT: int = 27017
     MONGO_DB: str = "media_manager"
     MONGO_USER: str
     MONGO_PASSWORD: str
-    
+
     # TMDB Configuration
     TMDB_API_KEY: str
     TMDB_API_URL: str = "https://api.themoviedb.org/3"
-    
+
     # Authentication
     SECRET_KEY: str = "change_me_in_production"  # Used for JWT signing
-    
+
     @field_validator("SECRET_KEY")
     @classmethod
     def validate_secret_key(cls, v: str, info) -> str:
         # Get environment from the data being validated
         env = info.data.get("ENVIRONMENT", "development")
-        
+
         if env == "production":
             # Ensure SECRET_KEY is not the default value in production
             if v == "change_me_in_production":
@@ -75,12 +75,10 @@ class Settings(BaseSettings):
             if len(v) < 32:
                 raise ValueError("SECRET_KEY must be at least 32 characters long")
         return v
-    
+
     ALGORITHM: str = "HS256"  # JWT signing algorithm
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 60 * 24  # 24 hours
-    
-    
-    
+
     @property
     def mongodb_url(self) -> str:
         """
@@ -100,7 +98,7 @@ def get_settings() -> Settings:
     For testing, override settings with test-specific values.
     """
     settings = Settings()
-    
+
     if settings.ENVIRONMENT == "test":
         # Override settings for test environment
         settings.MONGO_HOST = "localhost"
@@ -108,7 +106,7 @@ def get_settings() -> Settings:
         settings.MONGO_PASSWORD = "test_password"
         settings.MONGO_DB = "media_manager_test"
         settings.TMDB_API_KEY = "test_key"
-    
+
     return settings
 
 

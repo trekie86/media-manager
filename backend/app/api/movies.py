@@ -1,7 +1,7 @@
 """
 Movie API endpoints for CRUD operations.
 """
-from typing import List, Optional, Dict, Any, Union
+from typing import List, Optional, Dict, Any
 
 from bson import ObjectId
 from fastapi import APIRouter, Depends, HTTPException, Query
@@ -19,29 +19,31 @@ async def create_movie(movie: MovieCreate, db=Depends(get_database)) -> MovieRes
     """
     Create a new movie.
     """
-    
+
     # Validate that storage_id exists
     try:
         storage_id = ObjectId(movie.storage_id)
     except Exception:
         raise HTTPException(status_code=400, detail="Invalid storage_id format")
-    
+
     storage = await db.storage.find_one({"_id": storage_id})
     if not storage:
         raise HTTPException(status_code=404, detail="Storage location not found")
-    
+
     # Convert movie data for MongoDB, excluding None values
     movie_data = movie.model_dump(exclude_none=True)
     movie_data["storage_id"] = storage_id
-    
+
     try:
         result = await db.movies.insert_one(movie_data)
-        
+
         # Fetch the created movie
         created_movie = await db.movies.find_one({"_id": result.inserted_id})
         if not created_movie:
-            raise HTTPException(status_code=500, detail="Failed to retrieve created movie")
-        
+            raise HTTPException(
+                status_code=500, detail="Failed to retrieve created movie"
+            )
+
         # Convert ObjectId to string for response
         response_data = {
             "id": str(created_movie["_id"]),
@@ -54,9 +56,9 @@ async def create_movie(movie: MovieCreate, db=Depends(get_database)) -> MovieRes
             "runtime": created_movie.get("runtime"),
             "cover_image": created_movie.get("cover_image")
         }
-        
+
         return MovieResponse(**response_data)
-        
+
     except DuplicateKeyError:
         raise HTTPException(status_code=409, detail="Movie already exists")
     except Exception as e:
@@ -75,26 +77,26 @@ async def list_movies(
     """
     List movies with optional filtering.
     """
-    
+
     # Build filter query
     filter_query = {}
-    
+
     if storage_id:
         try:
             filter_query["storage_id"] = ObjectId(storage_id)
         except Exception:
             raise HTTPException(status_code=400, detail="Invalid storage_id format")
-    
+
     if format:
         filter_query["format"] = format
-    
+
     if genre:
         filter_query["genre"] = {"$in": [genre]}
-    
+
     try:
         cursor = db.movies.find(filter_query).skip(skip).limit(limit)
         movies = await cursor.to_list(length=limit)
-        
+
         # Convert ObjectIds to strings for response
         response_movies = []
         for movie in movies:
@@ -110,9 +112,9 @@ async def list_movies(
                 "cover_image": movie.get("cover_image")
             }
             response_movies.append(MovieResponse(**response_data))
-        
+
         return response_movies
-        
+
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Failed to list movies: {str(e)}")
 
@@ -177,7 +179,7 @@ async def search_movies(
 
         return response_movies
 
-    except Exception as e:
+    except Exception:
         # Fallback to regex search if text index doesn't exist
         try:
             filter_query: Dict[str, Any] = {
@@ -189,7 +191,9 @@ async def search_movies(
                 try:
                     filter_query["storage_id"] = ObjectId(storage_id)
                 except Exception:
-                    raise HTTPException(status_code=400, detail="Invalid storage_id format")
+                    raise HTTPException(
+                        status_code=400, detail="Invalid storage_id format"
+                    )
 
             if format:
                 filter_query["format"] = format
@@ -219,7 +223,10 @@ async def search_movies(
             return response_movies
 
         except Exception as fallback_e:
-            raise HTTPException(status_code=500, detail=f"Failed to search movies: {str(fallback_e)}")
+            raise HTTPException(
+                status_code=500,
+                detail=f"Failed to search movies: {str(fallback_e)}",
+            )
 
 
 @router.get("/tmdb/search", response_model=Dict[str, Any])
@@ -255,7 +262,9 @@ async def get_tmdb_movie(
     except HTTPException:
         raise
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Failed to get TMDB movie: {str(e)}")
+        raise HTTPException(
+            status_code=500, detail=f"Failed to get TMDB movie: {str(e)}"
+        )
 
 
 @router.get("/{movie_id}", response_model=MovieResponse)
@@ -263,17 +272,17 @@ async def get_movie(movie_id: str, db=Depends(get_database)) -> MovieResponse:
     """
     Get a specific movie by ID.
     """
-    
+
     try:
         object_id = ObjectId(movie_id)
     except Exception:
         raise HTTPException(status_code=400, detail="Invalid movie ID format")
-    
+
     try:
         movie = await db.movies.find_one({"_id": object_id})
         if not movie:
             raise HTTPException(status_code=404, detail="Movie not found")
-        
+
         # Convert ObjectId to string for response
         response_data = {
             "id": str(movie["_id"]),
@@ -286,9 +295,9 @@ async def get_movie(movie_id: str, db=Depends(get_database)) -> MovieResponse:
             "runtime": movie.get("runtime"),
             "cover_image": movie.get("cover_image")
         }
-        
+
         return MovieResponse(**response_data)
-        
+
     except HTTPException:
         raise
     except Exception as e:
@@ -296,21 +305,25 @@ async def get_movie(movie_id: str, db=Depends(get_database)) -> MovieResponse:
 
 
 @router.put("/{movie_id}", response_model=MovieResponse)
-async def update_movie(movie_id: str, movie_update: MovieUpdate, db=Depends(get_database)) -> MovieResponse:
+async def update_movie(
+    movie_id: str,
+    movie_update: MovieUpdate,
+    db=Depends(get_database),
+) -> MovieResponse:
     """
     Update an existing movie.
     """
-    
+
     try:
         object_id = ObjectId(movie_id)
     except Exception:
         raise HTTPException(status_code=400, detail="Invalid movie ID format")
-    
+
     # Check if movie exists
     existing_movie = await db.movies.find_one({"_id": object_id})
     if not existing_movie:
         raise HTTPException(status_code=404, detail="Movie not found")
-    
+
     # Build update data, excluding None values
     update_data = {}
     for field, value in movie_update.model_dump(exclude_unset=True).items():
@@ -320,32 +333,38 @@ async def update_movie(movie_id: str, movie_update: MovieUpdate, db=Depends(get_
                 try:
                     storage_id = ObjectId(value)
                 except Exception:
-                    raise HTTPException(status_code=400, detail="Invalid storage_id format")
-                
+                    raise HTTPException(
+                        status_code=400, detail="Invalid storage_id format"
+                    )
+
                 storage = await db.storage.find_one({"_id": storage_id})
                 if not storage:
-                    raise HTTPException(status_code=404, detail="Storage location not found")
+                    raise HTTPException(
+                        status_code=404, detail="Storage location not found"
+                    )
                 update_data[field] = storage_id
             else:
                 update_data[field] = value
-    
+
     if not update_data:
         raise HTTPException(status_code=400, detail="No valid fields to update")
-    
+
     try:
         result = await db.movies.update_one(
             {"_id": object_id},
             {"$set": update_data}
         )
-        
+
         if result.matched_count == 0:
             raise HTTPException(status_code=404, detail="Movie not found")
-        
+
         # Fetch updated movie
         updated_movie = await db.movies.find_one({"_id": object_id})
         if not updated_movie:
-            raise HTTPException(status_code=500, detail="Failed to retrieve updated movie")
-        
+            raise HTTPException(
+                status_code=500, detail="Failed to retrieve updated movie"
+            )
+
         # Convert ObjectId to string for response
         response_data = {
             "id": str(updated_movie["_id"]),
@@ -358,9 +377,9 @@ async def update_movie(movie_id: str, movie_update: MovieUpdate, db=Depends(get_
             "runtime": updated_movie.get("runtime"),
             "cover_image": updated_movie.get("cover_image")
         }
-        
+
         return MovieResponse(**response_data)
-        
+
     except HTTPException:
         raise
     except Exception as e:
@@ -372,18 +391,18 @@ async def delete_movie(movie_id: str, db=Depends(get_database)) -> None:
     """
     Delete a movie.
     """
-    
+
     try:
         object_id = ObjectId(movie_id)
     except Exception:
         raise HTTPException(status_code=400, detail="Invalid movie ID format")
-    
+
     try:
         result = await db.movies.delete_one({"_id": object_id})
-        
+
         if result.deleted_count == 0:
             raise HTTPException(status_code=404, detail="Movie not found")
-            
+
     except HTTPException:
         raise
     except Exception as e:
@@ -399,18 +418,18 @@ async def enrich_movie_with_tmdb(
     """
     Enrich an existing movie with TMDB metadata.
     """
-    
+
     try:
         object_id = ObjectId(movie_id)
     except Exception:
         raise HTTPException(status_code=400, detail="Invalid movie ID format")
-    
+
     # Get existing movie
     try:
         movie = await db.movies.find_one({"_id": object_id})
         if not movie:
             raise HTTPException(status_code=404, detail="Movie not found")
-        
+
         # Convert ObjectId to string for processing
         movie_data = {
             "id": str(movie["_id"]),
@@ -423,10 +442,10 @@ async def enrich_movie_with_tmdb(
             "runtime": movie.get("runtime"),
             "cover_image": movie.get("cover_image")
         }
-        
+
         # Enrich with TMDB data
         enriched_data = await tmdb.enrich_movie_data(movie_data)
-        
+
         # Update movie in database with enriched data
         update_data = {}
         for key, value in enriched_data.items():
@@ -435,18 +454,18 @@ async def enrich_movie_with_tmdb(
                     # Don't automatically set TMDB ID, just return it as suggestion
                     continue
                 update_data[key] = value
-        
+
         if update_data:
             await db.movies.update_one(
                 {"_id": object_id},
                 {"$set": update_data}
             )
-            
+
             # Fetch updated movie
             updated_movie = await db.movies.find_one({"_id": object_id})
             if updated_movie:
                 movie = updated_movie
-        
+
         # Convert ObjectId to string for response
         response_data = {
             "id": str(movie["_id"]),
@@ -459,16 +478,22 @@ async def enrich_movie_with_tmdb(
             "runtime": movie.get("runtime"),
             "cover_image": movie.get("cover_image")
         }
-        
+
         # Add enrichment suggestions to response
         if "suggested_tmdb_id" in enriched_data:
             response_data["suggested_tmdb_id"] = enriched_data["suggested_tmdb_id"]
-            response_data["suggested_tmdb_title"] = enriched_data.get("suggested_tmdb_title")
-            response_data["suggested_tmdb_poster"] = enriched_data.get("suggested_tmdb_poster")
-        
+            response_data["suggested_tmdb_title"] = enriched_data.get(
+                "suggested_tmdb_title"
+            )
+            response_data["suggested_tmdb_poster"] = enriched_data.get(
+                "suggested_tmdb_poster"
+            )
+
         return MovieResponse(**response_data)
-        
+
     except HTTPException:
         raise
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Failed to enrich movie: {str(e)}")
+        raise HTTPException(
+            status_code=500, detail=f"Failed to enrich movie: {str(e)}"
+        )

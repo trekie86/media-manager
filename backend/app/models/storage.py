@@ -25,12 +25,14 @@ class StorageMetadata(BaseModel):
     Optional metadata for storage locations.
     """
     capacity: Optional[int] = Field(
-        None, 
+        None,
         description="Storage capacity (if applicable)",
         ge=0  # Must be greater than or equal to 0
     )
     dimensions: Optional[str] = Field(None, description="Physical dimensions")
-    location: Optional[str] = Field(None, description="Physical location or coordinates")
+    location: Optional[str] = Field(
+        None, description="Physical location or coordinates"
+    )
     custom: Dict[str, Any] = Field(
         default_factory=dict,
         description="Custom metadata fields specific to storage type"
