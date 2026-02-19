@@ -20,7 +20,7 @@ router = APIRouter()
 async def create_movie(
     movie: MovieCreate,
     db=Depends(get_database),
-    tmdb: TMDBService = Depends(get_tmdb_service)
+    tmdb: TMDBService = Depends(get_tmdb_service),
 ) -> MovieResponse:
     """
     Create a new movie.
@@ -41,7 +41,8 @@ async def create_movie(
     movie_data["storage_id"] = storage_id
 
     # Auto-enrich from TMDB if tmdb_id provided and any enrichable field is missing
-    if movie.tmdb_id and (not movie.genre or not movie.runtime or not movie.cover_image):
+    needs_enrichment = not movie.genre or not movie.runtime or not movie.cover_image
+    if movie.tmdb_id and needs_enrichment:
         try:
             details = await tmdb.get_movie_details(movie.tmdb_id)
             if details:
@@ -52,7 +53,10 @@ async def create_movie(
                 if not movie.cover_image and details.get("poster_url"):
                     movie_data["cover_image"] = details["poster_url"]
         except Exception:
-            logger.warning(f"TMDB auto-enrichment failed for tmdb_id={movie.tmdb_id}, proceeding without enrichment")
+            logger.warning(
+                f"TMDB auto-enrichment failed for tmdb_id={movie.tmdb_id},"
+                " proceeding without enrichment"
+            )
     try:
         result = await db.movies.insert_one(movie_data)
 
