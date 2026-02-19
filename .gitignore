@@ -60,6 +60,9 @@ Thumbs.db
 data/
 logs/
 *.log
+.coverage
+.coverage.*
+htmlcov/
 
 # Generated content (build artifacts)
 generated/
