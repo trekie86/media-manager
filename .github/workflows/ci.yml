@@ -25,6 +25,7 @@ jobs:
         with:
           python-version: "3.12"
           enable-cache: true
+          cache-dependency-glob: "backend/requirements*.in"
 
       - name: Install dev dependencies
         run: uv pip install --system -r requirements-dev.in
@@ -59,6 +60,7 @@ jobs:
         with:
           python-version: "3.12"
           enable-cache: true
+          cache-dependency-glob: "backend/requirements*.in"
 
       - name: Install dev dependencies
         run: uv pip install --system -r requirements-dev.in
