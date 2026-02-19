@@ -46,9 +46,10 @@ docker/production/secrets/*
 !docker/production/secrets/.gitkeep
 secrets/
 
-# IDE
+# IDE / editor tooling
 .idea/
 .vscode/
+.claude/
 *.swp
 *.swo
 
