@@ -1,6 +1,7 @@
 """
 Models package initialization.
 """
+
 from .base import MongoModel
 from .movie import (
     MediaFormat,
@@ -8,7 +9,7 @@ from .movie import (
     MovieCreate,
     MovieUpdate,
     MovieInDB,
-    MovieResponse
+    MovieResponse,
 )
 from .storage import (
     StorageType,
@@ -16,15 +17,9 @@ from .storage import (
     StorageCreate,
     StorageUpdate,
     StorageInDB,
-    StorageResponse
+    StorageResponse,
 )
-from .user import (
-    UserBase,
-    UserCreate,
-    UserUpdate,
-    UserInDB,
-    UserResponse
-)
+from .user import UserBase, UserCreate, UserUpdate, UserInDB, UserResponse
 
 __all__ = [
     # Base

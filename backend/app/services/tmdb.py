@@ -1,6 +1,7 @@
 """
 TMDB (The Movie Database) API service for movie metadata enrichment.
 """
+
 from typing import Optional, Dict, Any
 import httpx
 from loguru import logger
@@ -16,7 +17,7 @@ class TMDBService:
 
     def __init__(self, api_key: Optional[str] = None):
         """Initialize TMDB service with API key."""
-        self.api_key = api_key or getattr(settings, 'TMDB_API_KEY', None)
+        self.api_key = api_key or getattr(settings, "TMDB_API_KEY", None)
         if not self.api_key:
             logger.warning(
                 "TMDB API key not configured. TMDB features will be disabled."
@@ -24,8 +25,7 @@ class TMDBService:
 
         # Create a persistent HTTP client for better performance
         self.client = httpx.AsyncClient(
-            timeout=30.0,
-            headers={"User-Agent": "MediaManager/1.0"}
+            timeout=30.0, headers={"User-Agent": "MediaManager/1.0"}
         )
 
     async def close(self):
@@ -53,7 +53,7 @@ class TMDBService:
         query: str,
         year: Optional[int] = None,
         page: int = 1,
-        include_adult: bool = False
+        include_adult: bool = False,
     ) -> Dict[str, Any]:
         """
         Search for movies by title.
@@ -72,15 +72,11 @@ class TMDBService:
 
         try:
             params = self._build_params(
-                query=query,
-                year=year,
-                page=page,
-                include_adult=include_adult
+                query=query, year=year, page=page, include_adult=include_adult
             )
 
             response = await self.client.get(
-                self._build_url("/search/movie"),
-                params=params
+                self._build_url("/search/movie"), params=params
             )
             response.raise_for_status()
 
@@ -123,8 +119,7 @@ class TMDBService:
             )
 
             response = await self.client.get(
-                self._build_url(f"/movie/{tmdb_id}"),
-                params=params
+                self._build_url(f"/movie/{tmdb_id}"), params=params
             )
             response.raise_for_status()
 
@@ -183,20 +178,22 @@ class TMDBService:
             details = await self.get_movie_details(movie_data["tmdb_id"])
             if details:
                 # Update with TMDB data, preserving existing user data
-                enriched_data.update({
-                    "tmdb_title": details.get("title"),
-                    "tmdb_overview": details.get("overview"),
-                    "tmdb_release_date": details.get("release_date"),
-                    "tmdb_runtime": details.get("runtime"),
-                    "tmdb_rating": details.get("vote_average"),
-                    "tmdb_vote_count": details.get("vote_count"),
-                    "tmdb_poster_url": details.get("poster_url"),
-                    "tmdb_backdrop_url": details.get("backdrop_url"),
-                    "tmdb_genres": details.get("genre_names", []),
-                    "tmdb_production_companies": details.get(
-                        "production_company_names", []
-                    )
-                })
+                enriched_data.update(
+                    {
+                        "tmdb_title": details.get("title"),
+                        "tmdb_overview": details.get("overview"),
+                        "tmdb_release_date": details.get("release_date"),
+                        "tmdb_runtime": details.get("runtime"),
+                        "tmdb_rating": details.get("vote_average"),
+                        "tmdb_vote_count": details.get("vote_count"),
+                        "tmdb_poster_url": details.get("poster_url"),
+                        "tmdb_backdrop_url": details.get("backdrop_url"),
+                        "tmdb_genres": details.get("genre_names", []),
+                        "tmdb_production_companies": details.get(
+                            "production_company_names", []
+                        ),
+                    }
+                )
 
                 # Update existing fields if they're empty
                 if not enriched_data.get("genre") and details.get("genre_names"):

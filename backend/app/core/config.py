@@ -1,6 +1,7 @@
 """
 Application configuration and settings.
 """
+
 from functools import lru_cache
 from typing import List, Union
 
@@ -12,6 +13,7 @@ class Settings(BaseSettings):
     """
     Application settings and environment variables.
     """
+
     # API Configuration
     PROJECT_NAME: str = "Media Manager API"
     VERSION: str = "0.1.0"
@@ -19,10 +21,7 @@ class Settings(BaseSettings):
 
     # Model configuration
     model_config = SettingsConfigDict(
-        env_file=".env",
-        env_file_encoding="utf-8",
-        case_sensitive=True,
-        extra="ignore"
+        env_file=".env", env_file_encoding="utf-8", case_sensitive=True, extra="ignore"
     )
 
     ENVIRONMENT: str = "development"

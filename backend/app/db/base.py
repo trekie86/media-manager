@@ -1,19 +1,21 @@
 """
 Base repository pattern implementation for MongoDB collections.
 """
+
 from typing import Any, Dict, List, Optional, TypeVar, Generic
 
 from bson import ObjectId
 from motor.motor_asyncio import AsyncIOMotorCollection
 from pymongo.results import DeleteResult, UpdateResult
 
-T = TypeVar('T')  # Type for the document model
+T = TypeVar("T")  # Type for the document model
 
 
 class BaseRepository(Generic[T]):
     """
     Base repository implementing common CRUD operations for MongoDB collections.
     """
+
     def __init__(self, collection: AsyncIOMotorCollection):
         self.collection = collection
 
@@ -55,33 +57,20 @@ class BaseRepository(Generic[T]):
         return [str(id) for id in result.inserted_ids]
 
     async def update_one(
-        self,
-        query: Dict[str, Any],
-        update: Dict[str, Any],
-        *,
-        upsert: bool = False
+        self, query: Dict[str, Any], update: Dict[str, Any], *, upsert: bool = False
     ) -> UpdateResult:
         """
         Update a single document matching the query.
         """
-        return await self.collection.update_one(
-            query,
-            {'$set': update},
-            upsert=upsert
-        )
+        return await self.collection.update_one(query, {"$set": update}, upsert=upsert)
 
     async def update_many(
-        self,
-        query: Dict[str, Any],
-        update: Dict[str, Any]
+        self, query: Dict[str, Any], update: Dict[str, Any]
     ) -> UpdateResult:
         """
         Update multiple documents matching the query.
         """
-        return await self.collection.update_many(
-            query,
-            {'$set': update}
-        )
+        return await self.collection.update_many(query, {"$set": update})
 
     async def delete_one(self, query: Dict[str, Any]) -> DeleteResult:
         """
@@ -105,4 +94,4 @@ class BaseRepository(Generic[T]):
         """
         Find a document by its ID.
         """
-        return self.find_one({'_id': ObjectId(id)})
+        return self.find_one({"_id": ObjectId(id)})

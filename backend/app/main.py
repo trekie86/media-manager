@@ -1,6 +1,7 @@
 """
 Main FastAPI application module.
 """
+
 from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
@@ -26,6 +27,7 @@ async def lifespan(app: FastAPI):
     # Shutdown: Close database connection and cleanup services
     await cleanup_tmdb_service()
     await close_mongo_connection()
+
 
 # Create FastAPI app instance
 app = FastAPI(
@@ -142,36 +144,24 @@ app = FastAPI(
     contact={
         "name": "Media Manager API Support",
         "email": "support@example.com",
-        "url": "https://github.com/trekie86/media-manager"
+        "url": "https://github.com/trekie86/media-manager",
     },
-    license_info={
-        "name": "MIT License",
-        "url": "https://opensource.org/licenses/MIT"
-    },
+    license_info={"name": "MIT License", "url": "https://opensource.org/licenses/MIT"},
     servers=[
-        {
-            "url": "http://localhost:8000",
-            "description": "Development server"
-        },
-        {
-            "url": "https://api.mediamanager.local",
-            "description": "Production server"
-        }
+        {"url": "http://localhost:8000", "description": "Development server"},
+        {"url": "https://api.mediamanager.local", "description": "Production server"},
     ],
     docs_url="/docs",
     redoc_url="/redoc",
     openapi_tags=[
-        {
-            "name": "health",
-            "description": "Health check and system status endpoints"
-        },
+        {"name": "health", "description": "Health check and system status endpoints"},
         {
             "name": "auth",
             "description": "Authentication and session management operations",
             "externalDocs": {
                 "description": "Authentication Guide",
-                "url": "https://docs.mediamanager.local/auth"
-            }
+                "url": "https://docs.mediamanager.local/auth",
+            },
         },
         {
             "name": "movies",
@@ -181,8 +171,8 @@ app = FastAPI(
             ),
             "externalDocs": {
                 "description": "Movie Management Guide",
-                "url": "https://docs.mediamanager.local/movies"
-            }
+                "url": "https://docs.mediamanager.local/movies",
+            },
         },
         {
             "name": "storage",
@@ -192,9 +182,9 @@ app = FastAPI(
             ),
             "externalDocs": {
                 "description": "Storage Organization Guide",
-                "url": "https://docs.mediamanager.local/storage"
-            }
-        }
+                "url": "https://docs.mediamanager.local/storage",
+            },
+        },
     ],
     swagger_ui_parameters={
         "defaultModelsExpandDepth": -1,
@@ -202,7 +192,7 @@ app = FastAPI(
         "filter": True,
         "showExtensions": True,
         "showCommonExtensions": True,
-        "tryItOutEnabled": True
+        "tryItOutEnabled": True,
     },
     openapi_url="/openapi.json",
     generate_unique_id_function=lambda route: (
@@ -246,10 +236,10 @@ app.include_router(api_router)
                     "example": {
                         "status": "healthy",
                         "version": "1.0.0",
-                        "timestamp": "2024-01-15T10:30:00Z"
+                        "timestamp": "2024-01-15T10:30:00Z",
                     }
                 }
-            }
+            },
         },
         503: {
             "description": "API is unhealthy - service unavailable",
@@ -258,12 +248,12 @@ app.include_router(api_router)
                     "example": {
                         "status": "unhealthy",
                         "version": "1.0.0",
-                        "timestamp": "2024-01-15T10:30:00Z"
+                        "timestamp": "2024-01-15T10:30:00Z",
                     }
                 }
-            }
-        }
-    }
+            },
+        },
+    },
 )
 async def health_check():
     """
@@ -290,14 +280,16 @@ async def health_check():
     """
     from datetime import datetime, timezone
     from app.core.health import (
-        check_database_health, check_tmdb_health, get_memory_usage
+        check_database_health,
+        check_tmdb_health,
+        get_memory_usage,
     )
 
     # Perform health checks
     checks = {
         "database": await check_database_health(),
         "tmdb_service": await check_tmdb_health(),
-        "memory": get_memory_usage()
+        "memory": get_memory_usage(),
     }
 
     # Determine overall status
@@ -313,5 +305,5 @@ async def health_check():
         version=settings.VERSION,
         env=settings.ENVIRONMENT,
         timestamp=datetime.now(timezone.utc).isoformat(),
-        checks=checks
+        checks=checks,
     )

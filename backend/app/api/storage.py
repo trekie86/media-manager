@@ -1,4 +1,5 @@
 """Storage routes for managing storage locations."""
+
 from typing import List, Optional
 
 from bson import ObjectId
@@ -6,9 +7,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query, status
 from pymongo.errors import DuplicateKeyError
 
 from app.db.connection import get_database
-from app.models.storage import (
-    StorageResponse, StorageUpdate, StorageTreeResponse
-)
+from app.models.storage import StorageResponse, StorageUpdate, StorageTreeResponse
 
 # Setup router
 router = APIRouter()
@@ -21,7 +20,7 @@ async def create_storage(storage_data_input: dict, db=Depends(get_database)):
     if await db.storage.find_one({"name": storage_data_input["name"]}):
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Storage name already exists"
+            detail="Storage name already exists",
         )
 
     # Initialize path as empty list if not set
@@ -36,7 +35,7 @@ async def create_storage(storage_data_input: dict, db=Depends(get_database)):
             if not parent:
                 raise HTTPException(
                     status_code=status.HTTP_404_NOT_FOUND,
-                    detail="Parent storage location not found"
+                    detail="Parent storage location not found",
                 )
 
             # Set path based on parent's path
@@ -47,7 +46,7 @@ async def create_storage(storage_data_input: dict, db=Depends(get_database)):
             if "Invalid ObjectId" in str(e):
                 raise HTTPException(
                     status_code=status.HTTP_400_BAD_REQUEST,
-                    detail="Invalid parent ID format"
+                    detail="Invalid parent ID format",
                 )
             raise
 
@@ -78,14 +77,14 @@ async def create_storage(storage_data_input: dict, db=Depends(get_database)):
                 else None
             ),
             "path": [str(p) for p in created_storage.get("path", [])],
-            "metadata": created_storage.get("metadata", {})
+            "metadata": created_storage.get("metadata", {}),
         }
 
         return StorageResponse(**response_data)
     except DuplicateKeyError:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Storage name already exists"
+            detail="Storage name already exists",
         )
 
 
@@ -95,7 +94,7 @@ async def list_storage(
     type: Optional[str] = None,
     skip: int = Query(0, ge=0),
     limit: int = Query(100, ge=1, le=1000),
-    db=Depends(get_database)
+    db=Depends(get_database),
 ):
     """List storage locations with optional filtering."""
     # Build query
@@ -124,7 +123,7 @@ async def list_storage(
             "type": item["type"],
             "parent_id": str(item["parent_id"]) if item.get("parent_id") else None,
             "path": [str(p) for p in item.get("path", [])],
-            "metadata": item.get("metadata", {})
+            "metadata": item.get("metadata", {}),
         }
         result.append(StorageResponse(**item_dict))
 
@@ -139,7 +138,7 @@ async def get_storage(storage_id: str, db=Depends(get_database)):
         if not storage:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
-                detail="Storage location not found"
+                detail="Storage location not found",
             )
 
         # Get movies in this storage location
@@ -158,7 +157,7 @@ async def get_storage(storage_id: str, db=Depends(get_database)):
                 "tmdb_id": movie.get("tmdb_id"),
                 "genre": movie.get("genre", []),
                 "runtime": movie.get("runtime"),
-                "cover_image": movie.get("cover_image")
+                "cover_image": movie.get("cover_image"),
             }
             movies_list.append(movie_dict)
 
@@ -178,7 +177,7 @@ async def get_storage(storage_id: str, db=Depends(get_database)):
                     str(child["parent_id"]) if child.get("parent_id") else None
                 ),
                 "path": [str(p) for p in child.get("path", [])],
-                "metadata": child.get("metadata", {})
+                "metadata": child.get("metadata", {}),
             }
             children_list.append(StorageResponse(**child_dict))
 
@@ -194,7 +193,7 @@ async def get_storage(storage_id: str, db=Depends(get_database)):
             "path": [str(p) for p in storage.get("path", [])],
             "metadata": storage.get("metadata", {}),
             "movies": movies_list,
-            "children": children_list
+            "children": children_list,
         }
 
         return StorageResponse(**response_data)
@@ -202,7 +201,7 @@ async def get_storage(storage_id: str, db=Depends(get_database)):
         if "Invalid ObjectId" in str(e):
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
-                detail="Invalid storage ID format"
+                detail="Invalid storage ID format",
             )
         raise
 
@@ -218,7 +217,7 @@ async def get_storage_tree(storage_id: str, db=Depends(get_database)):
         if not storage:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
-                detail="Storage location not found"
+                detail="Storage location not found",
             )
 
         # Get ancestors
@@ -245,7 +244,7 @@ async def get_storage_tree(storage_id: str, db=Depends(get_database)):
                         else None
                     ),
                     "path": [str(p) for p in ancestor.get("path", [])],
-                    "metadata": ancestor.get("metadata", {})
+                    "metadata": ancestor.get("metadata", {}),
                 }
                 ancestors_list.append(ancestor_dict)
 
@@ -267,7 +266,7 @@ async def get_storage_tree(storage_id: str, db=Depends(get_database)):
                     else None
                 ),
                 "path": [str(p) for p in descendant.get("path", [])],
-                "metadata": descendant.get("metadata", {})
+                "metadata": descendant.get("metadata", {}),
             }
             descendants_list.append(descendant_dict)
 
@@ -287,7 +286,7 @@ async def get_storage_tree(storage_id: str, db=Depends(get_database)):
                 "tmdb_id": movie.get("tmdb_id"),
                 "genre": movie.get("genre", []),
                 "runtime": movie.get("runtime"),
-                "cover_image": movie.get("cover_image")
+                "cover_image": movie.get("cover_image"),
             }
             movies_list.append(movie_dict)
 
@@ -307,7 +306,7 @@ async def get_storage_tree(storage_id: str, db=Depends(get_database)):
                     str(child["parent_id"]) if child.get("parent_id") else None
                 ),
                 "path": [str(p) for p in child.get("path", [])],
-                "metadata": child.get("metadata", {})
+                "metadata": child.get("metadata", {}),
             }
             children_list.append(child_dict)
 
@@ -327,7 +326,7 @@ async def get_storage_tree(storage_id: str, db=Depends(get_database)):
             "ancestors": [StorageResponse(**ancestor) for ancestor in ancestors_list],
             "descendants": [
                 StorageResponse(**descendant) for descendant in descendants_list
-            ]
+            ],
         }
 
         return StorageTreeResponse(**response_data)
@@ -335,16 +334,14 @@ async def get_storage_tree(storage_id: str, db=Depends(get_database)):
         if "Invalid ObjectId" in str(e):
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
-                detail="Invalid storage ID format"
+                detail="Invalid storage ID format",
             )
         raise
 
 
 @router.put("/{storage_id}", response_model=StorageResponse)
 async def update_storage(
-    storage_id: str,
-    storage_data: StorageUpdate,
-    db=Depends(get_database)
+    storage_id: str, storage_data: StorageUpdate, db=Depends(get_database)
 ):
     """Update a storage location."""
     try:
@@ -355,7 +352,7 @@ async def update_storage(
         if not storage:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
-                detail="Storage location not found"
+                detail="Storage location not found",
             )
 
         # Prepare update data
@@ -367,7 +364,7 @@ async def update_storage(
             if update_data["parent_id"] == storage_id:
                 raise HTTPException(
                     status_code=status.HTTP_400_BAD_REQUEST,
-                    detail="Storage location cannot be its own parent"
+                    detail="Storage location cannot be its own parent",
                 )
 
             # Convert parent_id to ObjectId
@@ -379,14 +376,14 @@ async def update_storage(
             if not parent:
                 raise HTTPException(
                     status_code=status.HTTP_404_NOT_FOUND,
-                    detail="Parent storage location not found"
+                    detail="Parent storage location not found",
                 )
 
             # Check if new parent is not a descendant of this storage
             if storage_oid in parent.get("path", []):
                 raise HTTPException(
                     status_code=status.HTTP_400_BAD_REQUEST,
-                    detail="Cannot set a descendant as parent (would create a cycle)"
+                    detail="Cannot set a descendant as parent (would create a cycle)",
                 )
 
             # Update path
@@ -396,31 +393,27 @@ async def update_storage(
             new_path_prefix = update_data["path"] + [storage_oid]
 
             # Find all descendants
-            descendants = await db.storage.find(
-                {"path": storage_oid}
-            ).to_list(length=1000)
+            descendants = await db.storage.find({"path": storage_oid}).to_list(
+                length=1000
+            )
 
             # Update each descendant's path
             for descendant in descendants:
                 # Find where in the path the current storage appears
                 idx = [str(p) for p in descendant["path"]].index(str(storage_oid))
                 # Replace the path up to and including the current storage
-                descendant_new_path = new_path_prefix + descendant["path"][idx+1:]
+                descendant_new_path = new_path_prefix + descendant["path"][idx + 1 :]
                 await db.storage.update_one(
-                    {"_id": descendant["_id"]},
-                    {"$set": {"path": descendant_new_path}}
+                    {"_id": descendant["_id"]}, {"$set": {"path": descendant_new_path}}
                 )
 
         # Update the storage document
         try:
-            await db.storage.update_one(
-                {"_id": storage_oid},
-                {"$set": update_data}
-            )
+            await db.storage.update_one({"_id": storage_oid}, {"$set": update_data})
         except DuplicateKeyError:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
-                detail="Storage name already exists"
+                detail="Storage name already exists",
             )
 
         # Get updated storage
@@ -438,7 +431,7 @@ async def update_storage(
                 else None
             ),
             "path": [str(p) for p in updated_storage.get("path", [])],
-            "metadata": updated_storage.get("metadata", {})
+            "metadata": updated_storage.get("metadata", {}),
         }
 
         return StorageResponse(**response_data)
@@ -446,7 +439,7 @@ async def update_storage(
         if "Invalid ObjectId" in str(e):
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
-                detail="Invalid storage ID format"
+                detail="Invalid storage ID format",
             )
         raise
 
@@ -462,7 +455,7 @@ async def delete_storage(storage_id: str, db=Depends(get_database)):
         if not storage:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
-                detail="Storage location not found"
+                detail="Storage location not found",
             )
 
         # Check if storage has children
@@ -470,7 +463,7 @@ async def delete_storage(storage_id: str, db=Depends(get_database)):
         if children_count > 0:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
-                detail="Cannot delete storage with children. Delete children first."
+                detail="Cannot delete storage with children. Delete children first.",
             )
 
         # Check if storage has movies
@@ -478,7 +471,7 @@ async def delete_storage(storage_id: str, db=Depends(get_database)):
         if movies_count > 0:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
-                detail="Cannot delete storage with movies. Move or delete movies first."
+                detail="Cannot delete storage with movies. Move or delete them first.",
             )
 
         # Delete storage
@@ -489,6 +482,6 @@ async def delete_storage(storage_id: str, db=Depends(get_database)):
         if "Invalid ObjectId" in str(e):
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
-                detail="Invalid storage ID format"
+                detail="Invalid storage ID format",
             )
         raise

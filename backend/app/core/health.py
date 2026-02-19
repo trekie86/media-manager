@@ -1,6 +1,7 @@
 """
 Health check utilities for monitoring application dependencies.
 """
+
 import psutil
 from typing import Dict, Any
 
@@ -12,6 +13,7 @@ async def check_database_health() -> bool:
     try:
         # Alternative: Use the client directly from connection module
         from app.db.connection import client
+
         if client is None:
             return False
 
@@ -46,7 +48,7 @@ def get_memory_usage() -> Dict[str, Any]:
             "total_mb": round(memory.total / 1024 / 1024, 2),
             "available_mb": round(memory.available / 1024 / 1024, 2),
             "used_percent": memory.percent,
-            "healthy": memory.percent < 85  # Consider healthy if under 85%
+            "healthy": memory.percent < 85,  # Consider healthy if under 85%
         }
     except Exception:
         return {"healthy": False, "error": "Unable to get memory stats"}

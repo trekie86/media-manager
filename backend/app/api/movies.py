@@ -1,6 +1,7 @@
 """
 Movie API endpoints for CRUD operations.
 """
+
 from typing import List, Optional, Dict, Any
 
 from bson import ObjectId
@@ -54,7 +55,7 @@ async def create_movie(movie: MovieCreate, db=Depends(get_database)) -> MovieRes
             "tmdb_id": created_movie.get("tmdb_id"),
             "genre": created_movie.get("genre"),
             "runtime": created_movie.get("runtime"),
-            "cover_image": created_movie.get("cover_image")
+            "cover_image": created_movie.get("cover_image"),
         }
 
         return MovieResponse(**response_data)
@@ -72,7 +73,7 @@ async def list_movies(
     storage_id: Optional[str] = Query(None, description="Filter by storage location"),
     format: Optional[str] = Query(None, description="Filter by media format"),
     genre: Optional[str] = Query(None, description="Filter by genre"),
-    db=Depends(get_database)
+    db=Depends(get_database),
 ) -> List[MovieResponse]:
     """
     List movies with optional filtering.
@@ -109,7 +110,7 @@ async def list_movies(
                 "tmdb_id": movie.get("tmdb_id"),
                 "genre": movie.get("genre"),
                 "runtime": movie.get("runtime"),
-                "cover_image": movie.get("cover_image")
+                "cover_image": movie.get("cover_image"),
             }
             response_movies.append(MovieResponse(**response_data))
 
@@ -127,7 +128,7 @@ async def search_movies(
     storage_id: Optional[str] = Query(None, description="Filter by storage location"),
     format: Optional[str] = Query(None, description="Filter by media format"),
     genre: Optional[str] = Query(None, description="Filter by genre"),
-    db=Depends(get_database)
+    db=Depends(get_database),
 ) -> List[MovieResponse]:
     """
     Search movies by title with optional filtering.
@@ -135,9 +136,7 @@ async def search_movies(
     """
 
     # Build filter query with text search
-    filter_query: Dict[str, Any] = {
-        "$text": {"$search": q}
-    }
+    filter_query: Dict[str, Any] = {"$text": {"$search": q}}
 
     # Add additional filters
     if storage_id:
@@ -154,10 +153,12 @@ async def search_movies(
 
     try:
         # Use text search with score sorting
-        cursor = db.movies.find(
-            filter_query,
-            {"score": {"$meta": "textScore"}}
-        ).sort([("score", {"$meta": "textScore"})]).skip(skip).limit(limit)
+        cursor = (
+            db.movies.find(filter_query, {"score": {"$meta": "textScore"}})
+            .sort([("score", {"$meta": "textScore"})])
+            .skip(skip)
+            .limit(limit)
+        )
 
         movies = await cursor.to_list(length=limit)
 
@@ -173,7 +174,7 @@ async def search_movies(
                 "tmdb_id": movie.get("tmdb_id"),
                 "genre": movie.get("genre"),
                 "runtime": movie.get("runtime"),
-                "cover_image": movie.get("cover_image")
+                "cover_image": movie.get("cover_image"),
             }
             response_movies.append(MovieResponse(**response_data))
 
@@ -182,9 +183,7 @@ async def search_movies(
     except Exception:
         # Fallback to regex search if text index doesn't exist
         try:
-            filter_query: Dict[str, Any] = {
-                "title": {"$regex": q, "$options": "i"}
-            }
+            filter_query: Dict[str, Any] = {"title": {"$regex": q, "$options": "i"}}
 
             # Add additional filters
             if storage_id:
@@ -216,7 +215,7 @@ async def search_movies(
                     "tmdb_id": movie.get("tmdb_id"),
                     "genre": movie.get("genre"),
                     "runtime": movie.get("runtime"),
-                    "cover_image": movie.get("cover_image")
+                    "cover_image": movie.get("cover_image"),
                 }
                 response_movies.append(MovieResponse(**response_data))
 
@@ -234,7 +233,7 @@ async def search_tmdb(
     q: str = Query(..., description="Search query for TMDB movies"),
     year: Optional[int] = Query(None, description="Filter by release year"),
     page: int = Query(1, ge=1, le=1000, description="Page number for pagination"),
-    tmdb: TMDBService = Depends(get_tmdb_service)
+    tmdb: TMDBService = Depends(get_tmdb_service),
 ) -> Dict[str, Any]:
     """
     Search TMDB for movie information.
@@ -248,8 +247,7 @@ async def search_tmdb(
 
 @router.get("/tmdb/{tmdb_id}", response_model=Dict[str, Any])
 async def get_tmdb_movie(
-    tmdb_id: int,
-    tmdb: TMDBService = Depends(get_tmdb_service)
+    tmdb_id: int, tmdb: TMDBService = Depends(get_tmdb_service)
 ) -> Dict[str, Any]:
     """
     Get detailed movie information from TMDB.
@@ -293,7 +291,7 @@ async def get_movie(movie_id: str, db=Depends(get_database)) -> MovieResponse:
             "tmdb_id": movie.get("tmdb_id"),
             "genre": movie.get("genre"),
             "runtime": movie.get("runtime"),
-            "cover_image": movie.get("cover_image")
+            "cover_image": movie.get("cover_image"),
         }
 
         return MovieResponse(**response_data)
@@ -350,10 +348,7 @@ async def update_movie(
         raise HTTPException(status_code=400, detail="No valid fields to update")
 
     try:
-        result = await db.movies.update_one(
-            {"_id": object_id},
-            {"$set": update_data}
-        )
+        result = await db.movies.update_one({"_id": object_id}, {"$set": update_data})
 
         if result.matched_count == 0:
             raise HTTPException(status_code=404, detail="Movie not found")
@@ -375,7 +370,7 @@ async def update_movie(
             "tmdb_id": updated_movie.get("tmdb_id"),
             "genre": updated_movie.get("genre"),
             "runtime": updated_movie.get("runtime"),
-            "cover_image": updated_movie.get("cover_image")
+            "cover_image": updated_movie.get("cover_image"),
         }
 
         return MovieResponse(**response_data)
@@ -413,7 +408,7 @@ async def delete_movie(movie_id: str, db=Depends(get_database)) -> None:
 async def enrich_movie_with_tmdb(
     movie_id: str,
     db=Depends(get_database),
-    tmdb: TMDBService = Depends(get_tmdb_service)
+    tmdb: TMDBService = Depends(get_tmdb_service),
 ) -> MovieResponse:
     """
     Enrich an existing movie with TMDB metadata.
@@ -440,7 +435,7 @@ async def enrich_movie_with_tmdb(
             "tmdb_id": movie.get("tmdb_id"),
             "genre": movie.get("genre"),
             "runtime": movie.get("runtime"),
-            "cover_image": movie.get("cover_image")
+            "cover_image": movie.get("cover_image"),
         }
 
         # Enrich with TMDB data
@@ -456,10 +451,7 @@ async def enrich_movie_with_tmdb(
                 update_data[key] = value
 
         if update_data:
-            await db.movies.update_one(
-                {"_id": object_id},
-                {"$set": update_data}
-            )
+            await db.movies.update_one({"_id": object_id}, {"$set": update_data})
 
             # Fetch updated movie
             updated_movie = await db.movies.find_one({"_id": object_id})
@@ -476,7 +468,7 @@ async def enrich_movie_with_tmdb(
             "tmdb_id": movie.get("tmdb_id"),
             "genre": movie.get("genre"),
             "runtime": movie.get("runtime"),
-            "cover_image": movie.get("cover_image")
+            "cover_image": movie.get("cover_image"),
         }
 
         # Add enrichment suggestions to response
@@ -494,6 +486,4 @@ async def enrich_movie_with_tmdb(
     except HTTPException:
         raise
     except Exception as e:
-        raise HTTPException(
-            status_code=500, detail=f"Failed to enrich movie: {str(e)}"
-        )
+        raise HTTPException(status_code=500, detail=f"Failed to enrich movie: {str(e)}")

@@ -1,4 +1,5 @@
 """Authentication routes for user registration and login."""
+
 from datetime import datetime, timedelta, timezone
 from typing import Optional
 from uuid import uuid4
@@ -40,11 +41,13 @@ def create_access_token(data: dict, expires_delta: Optional[timedelta] = None) -
     to_encode = data.copy()
 
     # Add token ID for revocation capability
-    to_encode.update({
-        "jti": str(uuid4()),  # JWT ID
-        "iat": datetime.now(timezone.utc),  # Issued at
-        "iss": "media-manager-api"  # Issuer
-    })
+    to_encode.update(
+        {
+            "jti": str(uuid4()),  # JWT ID
+            "iat": datetime.now(timezone.utc),  # Issued at
+            "iss": "media-manager-api",  # Issuer
+        }
+    )
 
     if expires_delta:
         expire = datetime.now(timezone.utc) + expires_delta
@@ -55,9 +58,7 @@ def create_access_token(data: dict, expires_delta: Optional[timedelta] = None) -
 
     to_encode.update({"exp": expire})
     encoded_jwt = jwt.encode(
-        to_encode,
-        settings.SECRET_KEY,
-        algorithm=settings.ALGORITHM
+        to_encode, settings.SECRET_KEY, algorithm=settings.ALGORITHM
     )
     return encoded_jwt
 
@@ -113,13 +114,13 @@ async def register_user(user_data: UserCreate, db=Depends(get_database)):
     if await db.users.find_one({"username": user_data.username}):
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Username already registered"
+            detail="Username already registered",
         )
 
     # Create user document
     user_in_db = UserInDB(
         **user_data.model_dump(exclude={"password"}),
-        password_hash=get_password_hash(user_data.password)
+        password_hash=get_password_hash(user_data.password),
     )
 
     try:
@@ -127,7 +128,7 @@ async def register_user(user_data: UserCreate, db=Depends(get_database)):
     except DuplicateKeyError:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Username already registered"
+            detail="Username already registered",
         )
 
     return UserResponse(**user_in_db.model_dump(exclude={"password_hash"}))
@@ -156,9 +157,7 @@ async def login(form_data: UserLogin, db=Depends(get_database)):
         )
 
     # Create access token
-    access_token = create_access_token(
-        data={"sub": user.username}
-    )
+    access_token = create_access_token(data={"sub": user.username})
 
     return TokenResponse(access_token=access_token, token_type="bearer")
 
@@ -186,8 +185,6 @@ async def refresh_token(current_user: UserInDB = Depends(get_current_active_user
     Refresh the access token for the current user.
     This creates a new token with a fresh expiration time.
     """
-    access_token = create_access_token(
-        data={"sub": current_user.username}
-    )
+    access_token = create_access_token(data={"sub": current_user.username})
 
     return TokenResponse(access_token=access_token, token_type="bearer")

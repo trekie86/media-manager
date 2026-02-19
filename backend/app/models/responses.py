@@ -1,11 +1,12 @@
 """
 Standardized response models for OpenAPI documentation and client generation.
 """
+
 from typing import Any, Dict, Generic, List, Optional, TypeVar
 from pydantic import BaseModel, Field
 
 # Generic type for paginated data
-T = TypeVar('T')
+T = TypeVar("T")
 
 
 class ErrorDetail(BaseModel):
@@ -42,16 +43,16 @@ class ErrorResponse(BaseModel):
                         {
                             "type": "missing_field",
                             "message": "Title is required",
-                            "field": "title"
+                            "field": "title",
                         }
-                    ]
+                    ],
                 },
                 {
                     "success": False,
                     "error": "not_found",
                     "message": "Movie not found",
-                    "request_id": "req_123456"
-                }
+                    "request_id": "req_123456",
+                },
             ]
         }
 
@@ -69,7 +70,7 @@ class SuccessResponse(BaseModel, Generic[T]):
                 {
                     "success": True,
                     "data": {"id": "507f1f77bcf86cd799439011", "title": "The Matrix"},
-                    "message": "Movie created successfully"
+                    "message": "Movie created successfully",
                 }
             ]
         }
@@ -93,7 +94,7 @@ class PaginationMeta(BaseModel):
                 "total_items": 150,
                 "total_pages": 8,
                 "has_next": True,
-                "has_prev": False
+                "has_prev": False,
             }
         }
 
@@ -112,7 +113,7 @@ class PaginatedResponse(BaseModel, Generic[T]):
                 "success": True,
                 "data": [
                     {"id": "507f1f77bcf86cd799439011", "title": "The Matrix"},
-                    {"id": "507f1f77bcf86cd799439012", "title": "Inception"}
+                    {"id": "507f1f77bcf86cd799439012", "title": "Inception"},
                 ],
                 "pagination": {
                     "page": 1,
@@ -120,8 +121,8 @@ class PaginatedResponse(BaseModel, Generic[T]):
                     "total_items": 150,
                     "total_pages": 8,
                     "has_next": True,
-                    "has_prev": False
-                }
+                    "has_prev": False,
+                },
             }
         }
 
@@ -142,7 +143,7 @@ class HealthResponse(BaseModel):
             "example": {
                 "status": "healthy",
                 "version": "1.0.0",
-                "timestamp": "2024-01-15T10:30:00Z"
+                "timestamp": "2024-01-15T10:30:00Z",
             }
         }
 
@@ -155,10 +156,7 @@ class MessageResponse(BaseModel):
 
     class Config:
         json_schema_extra = {
-            "example": {
-                "success": True,
-                "message": "Operation completed successfully"
-            }
+            "example": {"success": True, "message": "Operation completed successfully"}
         }
 
 
@@ -177,12 +175,12 @@ COMMON_RESPONSES = {
                         {
                             "type": "missing_field",
                             "message": "Title is required",
-                            "field": "title"
+                            "field": "title",
                         }
-                    ]
+                    ],
                 }
             }
-        }
+        },
     },
     401: {
         "description": "Unauthorized - Authentication required",
@@ -192,10 +190,10 @@ COMMON_RESPONSES = {
                 "example": {
                     "success": False,
                     "error": "unauthorized",
-                    "message": "Authentication required"
+                    "message": "Authentication required",
                 }
             }
-        }
+        },
     },
     403: {
         "description": "Forbidden - Insufficient permissions",
@@ -205,10 +203,10 @@ COMMON_RESPONSES = {
                 "example": {
                     "success": False,
                     "error": "forbidden",
-                    "message": "Insufficient permissions"
+                    "message": "Insufficient permissions",
                 }
             }
-        }
+        },
     },
     404: {
         "description": "Not Found - Resource not found",
@@ -218,10 +216,10 @@ COMMON_RESPONSES = {
                 "example": {
                     "success": False,
                     "error": "not_found",
-                    "message": "Resource not found"
+                    "message": "Resource not found",
                 }
             }
-        }
+        },
     },
     422: {
         "description": "Unprocessable Entity - Validation error",
@@ -236,12 +234,12 @@ COMMON_RESPONSES = {
                         {
                             "type": "invalid_format",
                             "message": "Invalid email format",
-                            "field": "email"
+                            "field": "email",
                         }
-                    ]
+                    ],
                 }
             }
-        }
+        },
     },
     500: {
         "description": "Internal Server Error - Unexpected server error",
@@ -251,9 +249,9 @@ COMMON_RESPONSES = {
                 "example": {
                     "success": False,
                     "error": "internal_error",
-                    "message": "An unexpected error occurred"
+                    "message": "An unexpected error occurred",
                 }
             }
-        }
-    }
+        },
+    },
 }

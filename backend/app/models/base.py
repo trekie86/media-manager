@@ -1,6 +1,7 @@
 """
 Base models and shared utilities.
 """
+
 from typing import Optional
 from datetime import datetime
 
@@ -12,12 +13,11 @@ class MongoModel(BaseModel):
     Base model with MongoDB configuration.
     Handles ObjectId conversion and provides common fields.
     """
+
     model_config = ConfigDict(
         arbitrary_types_allowed=True,
-        json_encoders={
-            datetime: lambda dt: dt.isoformat()
-        },
-        populate_by_name=True
+        json_encoders={datetime: lambda dt: dt.isoformat()},
+        populate_by_name=True,
     )
 
     id: Optional[str] = None

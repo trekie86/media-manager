@@ -1,6 +1,7 @@
 """
 MongoDB connection management.
 """
+
 from motor.motor_asyncio import AsyncIOMotorClient, AsyncIOMotorDatabase
 
 from app.core.config import settings
@@ -22,10 +23,11 @@ async def connect_to_mongo() -> None:
             maxPoolSize=10,
             minPoolSize=1,
             maxIdleTimeMS=30000,
-            serverSelectionTimeoutMS=5000)
+            serverSelectionTimeoutMS=5000,
+        )
         db = client[settings.MONGO_DB]
         # Verify connection
-        await client.admin.command('ping')
+        await client.admin.command("ping")
 
         # Create indexes
         await create_indexes()
