@@ -1,6 +1,7 @@
 """
 MongoDB connection management.
 """
+
 from motor.motor_asyncio import AsyncIOMotorClient, AsyncIOMotorDatabase
 
 from app.core.config import settings
@@ -22,19 +23,21 @@ async def connect_to_mongo() -> None:
             maxPoolSize=10,
             minPoolSize=1,
             maxIdleTimeMS=30000,
-            serverSelectionTimeoutMS=5000)
+            serverSelectionTimeoutMS=5000,
+        )
         db = client[settings.MONGO_DB]
         # Verify connection
-        await client.admin.command('ping')
-        
+        await client.admin.command("ping")
+
         # Create indexes
         await create_indexes()
-        
+
         print("Successfully connected to MongoDB")
     except Exception as e:
         print(f"Failed to connect to MongoDB: {e}")
         raise
-    
+
+
 async def create_indexes():
     """Create database indexes for performance."""
     await db.users.create_index("username", unique=True)
@@ -49,7 +52,6 @@ async def close_mongo_connection() -> None:
     Closes MongoDB connection.
     Should be called on application shutdown.
     """
-    global client
     if client is not None:
         client.close()
         print("MongoDB connection closed")

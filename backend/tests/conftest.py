@@ -132,7 +132,7 @@ async def sample_user_data() -> dict:
     return {
         "username": "testuser",
         "email": "test@example.com",
-        "password": "securepassword123"
+        "password": "SecurePassword123"
     }
 
 # Utility functions

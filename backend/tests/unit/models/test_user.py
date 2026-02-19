@@ -57,12 +57,12 @@ def test_create_user_success(sample_user_data):
     """Test creating a new user with valid data."""
     create_data = {
         **sample_user_data,
-        "password": "securepassword123"
+        "password": "SecurePassword123"
     }
     user = UserCreate(**create_data)
     assert user.username == create_data["username"]
     assert user.email == create_data["email"]
-    assert user.password == "securepassword123"
+    assert user.password == "SecurePassword123"
 
 def test_create_user_missing_password():
     """Test creating a new user without required password."""

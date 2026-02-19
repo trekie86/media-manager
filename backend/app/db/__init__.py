@@ -1,23 +1,23 @@
 """
 Database package initialization.
 """
+
 from motor.motor_asyncio import AsyncIOMotorDatabase
 
 from .connection import connect_to_mongo, close_mongo_connection, get_database
 from .base import BaseRepository
 
 __all__ = [
-    'connect_to_mongo',
-    'close_mongo_connection',
-    'get_database',
-    'BaseRepository',
-    'get_repository'
+    "connect_to_mongo",
+    "close_mongo_connection",
+    "get_database",
+    "BaseRepository",
+    "get_repository",
 ]
 
 
 def get_repository(
-    database: AsyncIOMotorDatabase,
-    collection_name: str
+    database: AsyncIOMotorDatabase, collection_name: str
 ) -> BaseRepository:
     """
     Factory function to create repositories for specific collections.
