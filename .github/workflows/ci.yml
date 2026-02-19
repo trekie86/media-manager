@@ -1,0 +1,146 @@
+name: CI
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+
+# Cancel in-progress runs on the same branch when a new commit is pushed
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  # ── Backend: Lint ──────────────────────────────────────────────────────────
+  backend-lint:
+    name: Backend — Lint
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: backend
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v4
+        with:
+          python-version: "3.12"
+          enable-cache: true
+          cache-dependency-glob: "backend/requirements*.in"
+
+      - name: Create virtual environment
+        run: uv venv
+
+      - name: Install dev dependencies
+        run: uv pip install -r requirements-dev.in
+
+      - name: flake8
+        run: uv run python -m flake8 app/
+
+      - name: black (format check)
+        run: uv run python -m black --check app/
+
+  # ── Backend: Unit Tests ────────────────────────────────────────────────────
+  backend-test:
+    name: Backend — Unit Tests
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: backend
+    env:
+      ENVIRONMENT: test
+      TMDB_API_KEY: test_api_key_for_ci
+      SECRET_KEY: test_secret_key_for_ci_only
+      MONGO_HOST: localhost
+      MONGO_PORT: "27017"
+      MONGO_USER: mediamanager
+      MONGO_PASSWORD: testpassword
+      MONGO_DB: mediamanager_test
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v4
+        with:
+          python-version: "3.12"
+          enable-cache: true
+          cache-dependency-glob: "backend/requirements*.in"
+
+      - name: Create virtual environment
+        run: uv venv
+
+      - name: Install dev dependencies
+        run: uv pip install -r requirements-dev.in
+
+      - name: Run unit tests
+        run: uv run pytest tests/unit/ -v
+
+  # ── Frontend: Type Check & Build ───────────────────────────────────────────
+  frontend-check:
+    name: Frontend — Type Check & Build
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: frontend
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Node.js 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: latest
+          run_install: false
+
+      - name: Get pnpm store path
+        id: pnpm-cache
+        run: echo "STORE_PATH=$(pnpm store path --silent)" >> $GITHUB_OUTPUT
+
+      - name: Cache pnpm store
+        uses: actions/cache@v4
+        with:
+          path: ${{ steps.pnpm-cache.outputs.STORE_PATH }}
+          key: ${{ runner.os }}-pnpm-store-${{ hashFiles('**/pnpm-lock.yaml') }}
+          restore-keys: |
+            ${{ runner.os }}-pnpm-store-
+
+      - name: Install dependencies
+        run: pnpm install
+
+      - name: Svelte type check
+        run: pnpm check
+
+      - name: Build
+        run: pnpm build
+
+  # ── Docker: Image Build Validation ────────────────────────────────────────
+  docker-build:
+    name: Docker — Build Images
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build backend image
+        uses: docker/build-push-action@v5
+        with:
+          context: ./backend
+          push: false
+          tags: media-manager-backend:ci
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Build frontend image
+        uses: docker/build-push-action@v5
+        with:
+          context: ./frontend
+          file: ./docker/development/frontend.dockerfile
+          push: false
+          tags: media-manager-frontend:ci
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
