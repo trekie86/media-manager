@@ -11,6 +11,9 @@
 		"check": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json",
 		"check:watch": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json --watch"
 	},
+	"dependencies": {
+		"svelte-multiselect": "^11.6.2"
+	},
 	"devDependencies": {
 		"@skeletonlabs/skeleton": "^4.12.0",
 		"@skeletonlabs/skeleton-svelte": "^4.12.0",

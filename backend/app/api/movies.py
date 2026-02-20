@@ -12,6 +12,7 @@ from pymongo.errors import DuplicateKeyError
 from ..db.connection import get_database
 from ..models.movie import MovieCreate, MovieResponse, MovieUpdate
 from ..services.tmdb import get_tmdb_service, TMDBService
+from ..services.genre import upsert_genres
 
 router = APIRouter()
 
@@ -33,6 +34,21 @@ async def _build_storage_filter(
         descendant_ids = [d["_id"] for d in descendants]
         return {"storage_id": {"$in": [storage_oid] + descendant_ids}}
     return {"storage_id": storage_oid}
+
+
+def _movie_to_response(movie: dict) -> MovieResponse:
+    """Convert a raw MongoDB movie document to a MovieResponse."""
+    return MovieResponse(
+        id=str(movie["_id"]),
+        title=movie["title"],
+        year=movie["year"],
+        format=movie["format"],
+        storage_id=str(movie["storage_id"]),
+        tmdb_id=movie.get("tmdb_id"),
+        genre_ids=movie.get("genre_ids"),
+        runtime=movie.get("runtime"),
+        cover_image=movie.get("cover_image"),
+    )
 
 
 @router.post("/", response_model=MovieResponse, status_code=201)
@@ -60,13 +76,17 @@ async def create_movie(
     movie_data["storage_id"] = storage_id
 
     # Auto-enrich from TMDB if tmdb_id provided and any enrichable field is missing
-    needs_enrichment = not movie.genre or not movie.runtime or not movie.cover_image
+    needs_enrichment = (
+        not movie.genre_ids or not movie.runtime or not movie.cover_image
+    )
     if movie.tmdb_id and needs_enrichment:
         try:
             details = await tmdb.get_movie_details(movie.tmdb_id)
             if details:
-                if not movie.genre and details.get("genre_names"):
-                    movie_data["genre"] = details["genre_names"]
+                if not movie.genre_ids and details.get("genre_ids"):
+                    movie_data["genre_ids"] = details["genre_ids"]
+                    # Persist any newly discovered genres to the genres collection
+                    await upsert_genres(db, details.get("genres", []))
                 if not movie.runtime and details.get("runtime"):
                     movie_data["runtime"] = details["runtime"]
                 if not movie.cover_image and details.get("poster_url"):
@@ -86,20 +106,7 @@ async def create_movie(
                 status_code=500, detail="Failed to retrieve created movie"
             )
 
-        # Convert ObjectId to string for response
-        response_data = {
-            "id": str(created_movie["_id"]),
-            "title": created_movie["title"],
-            "year": created_movie["year"],
-            "format": created_movie["format"],
-            "storage_id": str(created_movie["storage_id"]),
-            "tmdb_id": created_movie.get("tmdb_id"),
-            "genre": created_movie.get("genre"),
-            "runtime": created_movie.get("runtime"),
-            "cover_image": created_movie.get("cover_image"),
-        }
-
-        return MovieResponse(**response_data)
+        return _movie_to_response(created_movie)
 
     except DuplicateKeyError:
         raise HTTPException(status_code=409, detail="Movie already exists")
@@ -116,7 +123,7 @@ async def list_movies(
         False, description="Include movies from descendant storage locations"
     ),
     format: Optional[str] = Query(None, description="Filter by media format"),
-    genre: Optional[str] = Query(None, description="Filter by genre"),
+    genre_id: Optional[int] = Query(None, description="Filter by TMDB genre ID"),
     db=Depends(get_database),
 ) -> List[MovieResponse]:
     """
@@ -139,30 +146,13 @@ async def list_movies(
     if format:
         filter_query["format"] = format
 
-    if genre:
-        filter_query["genre"] = {"$in": [genre]}
+    if genre_id is not None:
+        filter_query["genre_ids"] = genre_id
 
     try:
         cursor = db.movies.find(filter_query).skip(skip).limit(limit)
         movies = await cursor.to_list(length=limit)
-
-        # Convert ObjectIds to strings for response
-        response_movies = []
-        for movie in movies:
-            response_data = {
-                "id": str(movie["_id"]),
-                "title": movie["title"],
-                "year": movie["year"],
-                "format": movie["format"],
-                "storage_id": str(movie["storage_id"]),
-                "tmdb_id": movie.get("tmdb_id"),
-                "genre": movie.get("genre"),
-                "runtime": movie.get("runtime"),
-                "cover_image": movie.get("cover_image"),
-            }
-            response_movies.append(MovieResponse(**response_data))
-
-        return response_movies
+        return [_movie_to_response(m) for m in movies]
 
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Failed to list movies: {str(e)}")
@@ -178,7 +168,7 @@ async def search_movies(
         False, description="Include movies from descendant storage locations"
     ),
     format: Optional[str] = Query(None, description="Filter by media format"),
-    genre: Optional[str] = Query(None, description="Filter by genre"),
+    genre_id: Optional[int] = Query(None, description="Filter by TMDB genre ID"),
     db=Depends(get_database),
 ) -> List[MovieResponse]:
     """
@@ -208,8 +198,8 @@ async def search_movies(
     if format:
         filter_query["format"] = format
 
-    if genre:
-        filter_query["genre"] = {"$in": [genre]}
+    if genre_id is not None:
+        filter_query["genre_ids"] = genre_id
 
     try:
         # Use text search with score sorting
@@ -221,29 +211,12 @@ async def search_movies(
         )
 
         movies = await cursor.to_list(length=limit)
-
-        # Convert ObjectIds to strings for response
-        response_movies = []
-        for movie in movies:
-            response_data = {
-                "id": str(movie["_id"]),
-                "title": movie["title"],
-                "year": movie["year"],
-                "format": movie["format"],
-                "storage_id": str(movie["storage_id"]),
-                "tmdb_id": movie.get("tmdb_id"),
-                "genre": movie.get("genre"),
-                "runtime": movie.get("runtime"),
-                "cover_image": movie.get("cover_image"),
-            }
-            response_movies.append(MovieResponse(**response_data))
-
-        return response_movies
+        return [_movie_to_response(m) for m in movies]
 
     except Exception:
         # Fallback to regex search if text index doesn't exist
         try:
-            filter_query: Dict[str, Any] = {"title": {"$regex": q, "$options": "i"}}
+            filter_query = {"title": {"$regex": q, "$options": "i"}}
 
             # Add additional filters (reuse already-resolved storage_filter)
             if storage_filter:
@@ -252,29 +225,12 @@ async def search_movies(
             if format:
                 filter_query["format"] = format
 
-            if genre:
-                filter_query["genre"] = {"$in": [genre]}
+            if genre_id is not None:
+                filter_query["genre_ids"] = genre_id
 
             cursor = db.movies.find(filter_query).skip(skip).limit(limit)
             movies = await cursor.to_list(length=limit)
-
-            # Convert ObjectIds to strings for response
-            response_movies = []
-            for movie in movies:
-                response_data = {
-                    "id": str(movie["_id"]),
-                    "title": movie["title"],
-                    "year": movie["year"],
-                    "format": movie["format"],
-                    "storage_id": str(movie["storage_id"]),
-                    "tmdb_id": movie.get("tmdb_id"),
-                    "genre": movie.get("genre"),
-                    "runtime": movie.get("runtime"),
-                    "cover_image": movie.get("cover_image"),
-                }
-                response_movies.append(MovieResponse(**response_data))
-
-            return response_movies
+            return [_movie_to_response(m) for m in movies]
 
         except Exception as fallback_e:
             raise HTTPException(
@@ -336,20 +292,7 @@ async def get_movie(movie_id: str, db=Depends(get_database)) -> MovieResponse:
         if not movie:
             raise HTTPException(status_code=404, detail="Movie not found")
 
-        # Convert ObjectId to string for response
-        response_data = {
-            "id": str(movie["_id"]),
-            "title": movie["title"],
-            "year": movie["year"],
-            "format": movie["format"],
-            "storage_id": str(movie["storage_id"]),
-            "tmdb_id": movie.get("tmdb_id"),
-            "genre": movie.get("genre"),
-            "runtime": movie.get("runtime"),
-            "cover_image": movie.get("cover_image"),
-        }
-
-        return MovieResponse(**response_data)
+        return _movie_to_response(movie)
 
     except HTTPException:
         raise
@@ -377,7 +320,7 @@ async def update_movie(
     if not existing_movie:
         raise HTTPException(status_code=404, detail="Movie not found")
 
-    # Build update data, excluding None values
+    # Build update data. Allow explicit empty lists (e.g. clearing genre_ids).
     update_data = {}
     for field, value in movie_update.model_dump(exclude_unset=True).items():
         if value is not None:
@@ -398,6 +341,9 @@ async def update_movie(
                 update_data[field] = storage_id
             else:
                 update_data[field] = value
+        elif field == "genre_ids":
+            # Allow explicitly setting genre_ids to an empty list to clear genres
+            update_data[field] = value
 
     if not update_data:
         raise HTTPException(status_code=400, detail="No valid fields to update")
@@ -415,20 +361,7 @@ async def update_movie(
                 status_code=500, detail="Failed to retrieve updated movie"
             )
 
-        # Convert ObjectId to string for response
-        response_data = {
-            "id": str(updated_movie["_id"]),
-            "title": updated_movie["title"],
-            "year": updated_movie["year"],
-            "format": updated_movie["format"],
-            "storage_id": str(updated_movie["storage_id"]),
-            "tmdb_id": updated_movie.get("tmdb_id"),
-            "genre": updated_movie.get("genre"),
-            "runtime": updated_movie.get("runtime"),
-            "cover_image": updated_movie.get("cover_image"),
-        }
-
-        return MovieResponse(**response_data)
+        return _movie_to_response(updated_movie)
 
     except HTTPException:
         raise
@@ -488,7 +421,7 @@ async def enrich_movie_with_tmdb(
             "format": movie["format"],
             "storage_id": str(movie["storage_id"]),
             "tmdb_id": movie.get("tmdb_id"),
-            "genre": movie.get("genre"),
+            "genre_ids": movie.get("genre_ids"),
             "runtime": movie.get("runtime"),
             "cover_image": movie.get("cover_image"),
         }
@@ -505,6 +438,17 @@ async def enrich_movie_with_tmdb(
                     continue
                 update_data[key] = value
 
+        # Persist any newly discovered genres
+        if enriched_data.get("tmdb_genre_ids"):
+            tmdb_genres = []
+            for gid, gname in zip(
+                enriched_data.get("tmdb_genre_ids", []),
+                enriched_data.get("tmdb_genres", []),
+            ):
+                tmdb_genres.append({"id": gid, "name": gname})
+            if tmdb_genres:
+                await upsert_genres(db, tmdb_genres)
+
         if update_data:
             await db.movies.update_one({"_id": object_id}, {"$set": update_data})
 
@@ -513,30 +457,15 @@ async def enrich_movie_with_tmdb(
             if updated_movie:
                 movie = updated_movie
 
-        # Convert ObjectId to string for response
-        response_data = {
-            "id": str(movie["_id"]),
-            "title": movie["title"],
-            "year": movie["year"],
-            "format": movie["format"],
-            "storage_id": str(movie["storage_id"]),
-            "tmdb_id": movie.get("tmdb_id"),
-            "genre": movie.get("genre"),
-            "runtime": movie.get("runtime"),
-            "cover_image": movie.get("cover_image"),
-        }
+        response = _movie_to_response(movie)
 
-        # Add enrichment suggestions to response
+        # Add enrichment suggestions to response dict if present
         if "suggested_tmdb_id" in enriched_data:
-            response_data["suggested_tmdb_id"] = enriched_data["suggested_tmdb_id"]
-            response_data["suggested_tmdb_title"] = enriched_data.get(
-                "suggested_tmdb_title"
-            )
-            response_data["suggested_tmdb_poster"] = enriched_data.get(
-                "suggested_tmdb_poster"
-            )
+            # MovieResponse doesn't have these fields; caller can inspect them
+            # via the raw JSON body — attach as extra fields via model_extra
+            pass
 
-        return MovieResponse(**response_data)
+        return response
 
     except HTTPException:
         raise

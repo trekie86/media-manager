@@ -25,7 +25,7 @@ def test_fixture_explanation(sample_movie_data):
         "year": 2025,
         "format": MediaFormat.DVD.value,  # Using enum value for type safety
         "tmdb_id": 12345,
-        "genre": ["Action", "Sci-Fi"],
+        "genre_ids": [28, 878],
         "runtime": 120,
         "cover_image": "http://example.com/poster.jpg"
     }
@@ -54,7 +54,7 @@ def test_create_movie_success(sample_movie_data):
     assert movie.year == sample_movie_data["year"]
     assert movie.format == sample_movie_data["format"]
     assert movie.tmdb_id == sample_movie_data["tmdb_id"]
-    assert movie.genre == sample_movie_data["genre"]
+    assert movie.genre_ids == sample_movie_data["genre_ids"]
     assert movie.runtime == sample_movie_data["runtime"]
     assert movie.cover_image == sample_movie_data["cover_image"]
 
@@ -65,7 +65,7 @@ def test_create_movie_invalid_year():
         "year": 1800,  # Too old
         "format": MediaFormat.DVD.value,
         "tmdb_id": 12345,
-        "genre": ["Action"],
+        "genre_ids": [28],
         "runtime": 120,
         "cover_image": "http://example.com/poster.jpg"
     }
@@ -80,7 +80,7 @@ def test_create_movie_invalid_format():
         "year": 2025,
         "format": "VHS",  # Invalid format
         "tmdb_id": 12345,
-        "genre": ["Action"],
+        "genre_ids": [28],
         "runtime": 120,
         "cover_image": "http://example.com/poster.jpg"
     }
@@ -106,7 +106,7 @@ def test_create_movie_invalid_runtime():
         "year": 2025,
         "format": MediaFormat.DVD.value,
         "tmdb_id": 12345,
-        "genre": ["Action"],
+        "genre_ids": [28],
         "runtime": -120,  # Negative runtime
         "cover_image": "http://example.com/poster.jpg"
     }

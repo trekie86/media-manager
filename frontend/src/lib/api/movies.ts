@@ -9,7 +9,7 @@ export interface Movie {
 	format: MovieFormat;
 	storage_id: string;
 	tmdb_id?: number;
-	genre?: string[];
+	genre_ids?: number[];
 	runtime?: number;
 	cover_image?: string;
 }
@@ -20,7 +20,7 @@ export interface MovieCreate {
 	format: MovieFormat;
 	storage_id: string;
 	tmdb_id?: number;
-	genre?: string[];
+	genre_ids?: number[];
 	runtime?: number;
 	cover_image?: string;
 }
@@ -31,7 +31,7 @@ export interface MovieUpdate {
 	format?: MovieFormat;
 	storage_id?: string;
 	tmdb_id?: number;
-	genre?: string[];
+	genre_ids?: number[] | null;
 	runtime?: number;
 	cover_image?: string;
 }
@@ -42,7 +42,7 @@ export interface MovieFilters {
 	storage_id?: string;
 	include_descendants?: boolean;
 	format?: string;
-	genre?: string;
+	genre_id?: number;
 }
 
 export interface TmdbSearchResult {
@@ -64,6 +64,7 @@ export interface TmdbMovie {
 
 export interface TmdbMovieDetails extends TmdbMovie {
 	runtime?: number;
+	genre_ids?: number[];
 	genre_names?: string[];
 	poster_url?: string;
 }
@@ -75,7 +76,7 @@ export async function listMovies(filters: MovieFilters = {}): Promise<Movie[]> {
 	if (filters.storage_id) params.set('storage_id', filters.storage_id);
 	if (filters.include_descendants) params.set('include_descendants', 'true');
 	if (filters.format) params.set('format', filters.format);
-	if (filters.genre) params.set('genre', filters.genre);
+	if (filters.genre_id != null) params.set('genre_id', String(filters.genre_id));
 	const qs = params.toString();
 	return request<Movie[]>(`/api/movies/${qs ? `?${qs}` : ''}`);
 }
@@ -87,7 +88,7 @@ export async function searchMovies(q: string, filters: MovieFilters = {}): Promi
 	if (filters.storage_id) params.set('storage_id', filters.storage_id);
 	if (filters.include_descendants) params.set('include_descendants', 'true');
 	if (filters.format) params.set('format', filters.format);
-	if (filters.genre) params.set('genre', filters.genre);
+	if (filters.genre_id != null) params.set('genre_id', String(filters.genre_id));
 	return request<Movie[]>(`/api/movies/search?${params.toString()}`);
 }
 

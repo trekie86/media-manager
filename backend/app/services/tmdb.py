@@ -133,8 +133,9 @@ class TMDBService:
                     data["backdrop_path"], "w1280"
                 )
 
-            # Process genres into simple list
+            # Process genres into IDs and names
             if data.get("genres"):
+                data["genre_ids"] = [genre["id"] for genre in data["genres"]]
                 data["genre_names"] = [genre["name"] for genre in data["genres"]]
 
             # Process production companies
@@ -188,7 +189,8 @@ class TMDBService:
                         "tmdb_vote_count": details.get("vote_count"),
                         "tmdb_poster_url": details.get("poster_url"),
                         "tmdb_backdrop_url": details.get("backdrop_url"),
-                        "tmdb_genres": details.get("genre_names", []),
+                        "tmdb_genre_ids": details.get("genre_ids", []),
+                    "tmdb_genres": details.get("genre_names", []),
                         "tmdb_production_companies": details.get(
                             "production_company_names", []
                         ),
@@ -196,8 +198,8 @@ class TMDBService:
                 )
 
                 # Update existing fields if they're empty
-                if not enriched_data.get("genre") and details.get("genre_names"):
-                    enriched_data["genre"] = details["genre_names"]
+                if not enriched_data.get("genre_ids") and details.get("genre_ids"):
+                    enriched_data["genre_ids"] = details["genre_ids"]
 
                 if not enriched_data.get("runtime") and details.get("runtime"):
                     enriched_data["runtime"] = details["runtime"]
