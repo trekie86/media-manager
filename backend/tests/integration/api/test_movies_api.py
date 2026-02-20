@@ -311,6 +311,27 @@ async def test_update_movie_success(client, test_db, sample_storage):
     assert data["format"] == "DVD"  # Unchanged field
 
 
+async def test_update_movie_clear_genres(client, test_db, sample_storage):
+    """Test that updating a movie with an empty genre list clears all genres."""
+    # Create a movie with genres
+    movie_data = {
+        "title": "Test Movie",
+        "year": 2020,
+        "format": "DVD",
+        "storage_id": ObjectId(sample_storage),
+        "genre": ["Action", "Thriller"]
+    }
+    result = await test_db.movies.insert_one(movie_data)
+    movie_id = str(result.inserted_id)
+
+    # Clear all genres by sending an empty list
+    response = await client.put(f"/api/movies/{movie_id}", json={"genre": []})
+
+    assert response.status_code == 200
+    data = response.json()
+    assert data["genre"] == [] or data["genre"] is None
+
+
 async def test_update_movie_storage_location(client, test_db):
     """Test updating movie storage location."""
     # Create two storage locations
