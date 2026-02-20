@@ -173,7 +173,9 @@ app = FastAPI(
         },
         {
             "name": "genres",
-            "description": "Genre catalogue — pre-seeded from TMDB, grows via auto-discovery",
+            "description": (
+                "Genre catalogue — pre-seeded from TMDB, grows via auto-discovery"
+            ),
         },
         {
             "name": "movies",

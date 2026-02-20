@@ -76,9 +76,7 @@ async def create_movie(
     movie_data["storage_id"] = storage_id
 
     # Auto-enrich from TMDB if tmdb_id provided and any enrichable field is missing
-    needs_enrichment = (
-        not movie.genre_ids or not movie.runtime or not movie.cover_image
-    )
+    needs_enrichment = not movie.genre_ids or not movie.runtime or not movie.cover_image
     if movie.tmdb_id and needs_enrichment:
         try:
             details = await tmdb.get_movie_details(movie.tmdb_id)

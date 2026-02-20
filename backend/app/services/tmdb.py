@@ -190,7 +190,7 @@ class TMDBService:
                         "tmdb_poster_url": details.get("poster_url"),
                         "tmdb_backdrop_url": details.get("backdrop_url"),
                         "tmdb_genre_ids": details.get("genre_ids", []),
-                    "tmdb_genres": details.get("genre_names", []),
+                        "tmdb_genres": details.get("genre_names", []),
                         "tmdb_production_companies": details.get(
                             "production_company_names", []
                         ),
