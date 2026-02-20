@@ -238,7 +238,7 @@
 				format: formFormat,
 				storage_id: formStorageId,
 				tmdb_id: formTmdbId,
-				genre: formGenre ? formGenre.split(',').map((g) => g.trim()).filter(Boolean) : undefined,
+				genre: formGenre ? formGenre.split(',').map((g) => g.trim()).filter(Boolean) : [],
 				runtime: formRuntime !== '' ? Number(formRuntime) : undefined,
 				cover_image: formCoverImage.trim() || undefined
 			};
