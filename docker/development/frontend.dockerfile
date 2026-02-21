@@ -26,5 +26,6 @@ WORKDIR /workspace/frontend
 # Expose port 3000
 EXPOSE 3000
 
-# Start development server with hot reload
-CMD ["pnpm", "dev", "--host"]
+# Re-run pnpm install on each container start so node_modules stays in sync
+# with the lockfile even when Docker anonymous volumes are reused across rebuilds.
+CMD ["sh", "-c", "cd /workspace && pnpm install --filter frontend --frozen-lockfile && pnpm --filter frontend dev --host"]

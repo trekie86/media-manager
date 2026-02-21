@@ -44,7 +44,9 @@ async def create_indexes():
     await db.users.create_index("email", unique=True, sparse=True)
     await db.movies.create_index([("title", 1), ("year", 1)])
     await db.movies.create_index("storage_id")
-    await db.movies.create_index([("title", "text"), ("genre", "text")])
+    await db.movies.create_index([("title", "text")])
+    await db.movies.create_index("genre_ids")
+    await db.genres.create_index("id", unique=True)
 
 
 async def close_mongo_connection() -> None:

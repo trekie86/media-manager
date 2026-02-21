@@ -120,7 +120,7 @@ async def sample_movie_data() -> dict:
         "year": 2025,
         "format": MediaFormat.DVD.value,
         "tmdb_id": 12345,
-        "genre": ["Action", "Sci-Fi"],
+        "genre_ids": [28, 878],
         "runtime": 120,
         "cover_image": "http://example.com/poster.jpg"
     }

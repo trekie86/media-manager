@@ -2,6 +2,7 @@
 	import { page } from '$app/stores';
 	import { goto } from '$app/navigation';
 	import { onMount } from 'svelte';
+	import MultiSelect from 'svelte-multiselect';
 	import {
 		listMovies,
 		searchMovies,
@@ -16,6 +17,7 @@
 		type MovieFormat,
 		type TmdbMovie
 	} from '$lib/api/movies';
+	import { listGenres, type Genre } from '$lib/api/genres';
 	import { listStorage, buildTree, type Storage, type StorageNode } from '$lib/api/storage';
 	import { ApiError } from '$lib/api/client';
 	import { toast } from '$lib/stores/toast';
@@ -27,10 +29,13 @@
 	let loading = $state(true);
 	let error = $state('');
 
+	// Genres
+	let allGenres = $state<Genre[]>([]);
+
 	// Filters
 	let filterFormat = $state('');
 	let filterStorage = $state('');
-	let filterGenre = $state('');
+	let filterGenreId = $state<number | undefined>(undefined);
 	// When a storage filter is active, include movies from descendant nodes by default.
 	// This can be seeded from the URL param (e.g. when navigating from the storage page).
 	let filterIncludeDescendants = $state(true);
@@ -70,7 +75,7 @@
 	let formYear = $state(new Date().getFullYear());
 	let formFormat = $state<MovieFormat>('DVD');
 	let formStorageId = $state('');
-	let formGenre = $state('');
+	let selectedGenreNames = $state<string[]>([]);
 	let formRuntime = $state<number | ''>('');
 	let formCoverImage = $state('');
 	let formTmdbId = $state<number | undefined>(undefined);
@@ -95,7 +100,7 @@
 				filterIncludeDescendants = urlDescendantsParam === 'true';
 			}
 		}
-		await Promise.all([loadMovies(), loadStorage()]);
+		await Promise.all([loadMovies(), loadStorage(), loadGenres()]);
 	});
 
 	// React to URL search param changes
@@ -116,7 +121,7 @@
 				format: filterFormat || undefined,
 				storage_id: filterStorage || undefined,
 				include_descendants: filterStorage ? filterIncludeDescendants : undefined,
-				genre: filterGenre || undefined,
+				genre_id: filterGenreId,
 				limit: 200
 			};
 			if (searchQuery.trim()) {
@@ -140,6 +145,21 @@
 		}
 	}
 
+	async function loadGenres() {
+		try {
+			allGenres = await listGenres();
+		} catch {
+			// Non-critical — genre filter will be hidden if list fails to load
+		}
+	}
+
+	function genreNames(ids: number[] | undefined): string[] {
+		if (!ids?.length) return [];
+		return ids
+			.map((id) => allGenres.find((g) => g.id === id)?.name)
+			.filter((n): n is string => n !== undefined);
+	}
+
 	function storageName(id: string): string {
 		return storageList.find((s) => s.id === id)?.name ?? id;
 	}
@@ -151,7 +171,7 @@
 		formYear = new Date().getFullYear();
 		formFormat = 'DVD';
 		formStorageId = storageList[0]?.id ?? '';
-		formGenre = '';
+		selectedGenreNames = [];
 		formRuntime = '';
 		formCoverImage = '';
 		formTmdbId = undefined;
@@ -167,7 +187,7 @@
 		formYear = m.year;
 		formFormat = m.format;
 		formStorageId = m.storage_id;
-		formGenre = m.genre?.join(', ') ?? '';
+		selectedGenreNames = genreNames(m.genre_ids);
 		formRuntime = m.runtime ?? '';
 		formCoverImage = m.cover_image ?? '';
 		formTmdbId = m.tmdb_id;
@@ -213,7 +233,7 @@
 		try {
 			const details = await getTmdbMovie(t.id);
 			if (details.runtime) formRuntime = details.runtime;
-			if (details.genre_names?.length) formGenre = details.genre_names.join(', ');
+			if (details.genre_ids?.length) selectedGenreNames = genreNames(details.genre_ids);
 			if (details.poster_url && !formCoverImage) formCoverImage = details.poster_url;
 		} catch {
 			// Non-critical — fields can be filled manually or enriched after save
@@ -238,7 +258,9 @@
 				format: formFormat,
 				storage_id: formStorageId,
 				tmdb_id: formTmdbId,
-				genre: formGenre ? formGenre.split(',').map((g) => g.trim()).filter(Boolean) : [],
+				genre_ids: selectedGenreNames
+					.map((name) => allGenres.find((g) => g.name === name)?.id)
+					.filter((id): id is number => id !== undefined),
 				runtime: formRuntime !== '' ? Number(formRuntime) : undefined,
 				cover_image: formCoverImage.trim() || undefined
 			};
@@ -301,7 +323,7 @@
 	function clearFilters() {
 		filterFormat = '';
 		filterStorage = '';
-		filterGenre = '';
+		filterGenreId = undefined;
 		searchQuery = '';
 		goto('/movies');
 		loadMovies();
@@ -354,15 +376,20 @@
 			{/if}
 		</div>
 
-		<input
-			type="text"
-			bind:value={filterGenre}
-			onchange={applyFilters}
-			placeholder="Genre…"
-			class="text-sm px-3 py-1.5 rounded-lg border border-surface-200 dark:border-surface-600 bg-surface-50 dark:bg-surface-700 text-surface-700 dark:text-surface-300 w-32"
-		/>
+		{#if allGenres.length > 0}
+		<select
+				bind:value={filterGenreId}
+				onchange={applyFilters}
+				class="text-sm px-3 py-1.5 rounded-lg border border-surface-200 dark:border-surface-600 bg-surface-50 dark:bg-surface-700 text-surface-700 dark:text-surface-300"
+			>
+				<option value={undefined}>All Genres</option>
+				{#each allGenres as genre}
+					<option value={genre.id}>{genre.name}</option>
+				{/each}
+			</select>
+		{/if}
 
-		{#if filterFormat || filterStorage || filterGenre || searchQuery}
+		{#if filterFormat || filterStorage || filterGenreId != null || searchQuery}
 			<button
 				onclick={clearFilters}
 				class="text-sm px-3 py-1.5 rounded-lg text-error-600 dark:text-error-400 hover:bg-error-50 dark:hover:bg-error-950 transition-colors"
@@ -472,9 +499,9 @@
 						{#if movie.runtime}
 							<p class="text-xs text-surface-400 mt-1">{formatRuntime(movie.runtime)}</p>
 						{/if}
-						{#if movie.genre && movie.genre.length > 0}
+						{#if movie.genre_ids && movie.genre_ids.length > 0}
 							<div class="flex flex-wrap gap-1 mt-1.5">
-								{#each movie.genre.slice(0, 2) as g}
+								{#each genreNames(movie.genre_ids).slice(0, 2) as g}
 									<span class="text-xs px-1.5 py-0.5 rounded-full bg-primary-100 dark:bg-primary-900 text-primary-700 dark:text-primary-300">
 										{g}
 									</span>
@@ -635,15 +662,14 @@
 						</div>
 
 						<div>
-							<label for="form-genre" class="block text-sm font-medium text-surface-700 dark:text-surface-300 mb-1">
+							<label class="block text-sm font-medium text-surface-700 dark:text-surface-300 mb-1">
 								Genres
 							</label>
-							<input
-								id="form-genre"
-								type="text"
-								bind:value={formGenre}
-								class="w-full px-3 py-2 text-sm rounded-lg border border-surface-200 dark:border-surface-600 bg-white dark:bg-surface-700 text-surface-900 dark:text-surface-50 focus:outline-none focus:ring-2 focus:ring-primary-500"
-								placeholder="Action, Drama, …"
+							<MultiSelect
+								options={allGenres.map((g) => g.name)}
+								bind:selected={selectedGenreNames}
+								placeholder="Select genres…"
+								style="width: 100%; font-size: 0.875rem;"
 							/>
 						</div>
 

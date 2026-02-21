@@ -29,7 +29,9 @@ class MovieBase(MongoModel):
     year: int = Field(..., description="Release year", ge=1900, le=2100)
     format: MediaFormat = Field(..., description="Physical media format")
     tmdb_id: Optional[int] = Field(None, description="TMDB movie ID")
-    genre: Optional[List[str]] = Field(default=None, description="List of genres")
+    genre_ids: Optional[List[int]] = Field(
+        default=None, description="List of TMDB genre IDs"
+    )
     runtime: Optional[int] = Field(None, description="Movie runtime in minutes", ge=0)
     cover_image: Optional[str] = Field(None, description="URL to cover image")
 
@@ -56,7 +58,7 @@ class MovieUpdate(MongoModel):
         None, description="ID of the storage location (cabinet, shelf, bin, etc.)"
     )
     tmdb_id: Optional[int] = None
-    genre: Optional[List[str]] = None
+    genre_ids: Optional[List[int]] = None
     runtime: Optional[int] = None
     cover_image: Optional[str] = None
 

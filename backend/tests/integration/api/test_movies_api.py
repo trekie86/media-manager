@@ -32,7 +32,7 @@ async def sample_movie_data(sample_storage):
         "format": MediaFormat.BLURAY.value,
         "storage_id": sample_storage,
         "tmdb_id": 603,
-        "genre": ["Action", "Science Fiction"],
+        "genre_ids": [28, 878],
         "runtime": 136,
         "cover_image": "https://example.com/matrix.jpg"
     }
@@ -52,7 +52,7 @@ async def test_create_movie_success(client, sample_movie_data, test_db):
     assert data["format"] == sample_movie_data["format"]
     assert data["storage_id"] == sample_movie_data["storage_id"]
     assert data["tmdb_id"] == sample_movie_data["tmdb_id"]
-    assert data["genre"] == sample_movie_data["genre"]
+    assert data["genre_ids"] == sample_movie_data["genre_ids"]
     assert data["runtime"] == sample_movie_data["runtime"]
     assert data["cover_image"] == sample_movie_data["cover_image"]
     
@@ -100,7 +100,7 @@ async def test_create_movie_minimal_data(client, sample_storage):
     data = response.json()
     assert data["title"] == minimal_data["title"]
     assert data["tmdb_id"] is None
-    assert data["genre"] is None
+    assert data["genre_ids"] is None
     assert data["runtime"] is None
     assert data["cover_image"] is None
 
@@ -122,14 +122,14 @@ async def test_list_movies_with_data(client, test_db, sample_storage):
             "year": 2020,
             "format": "DVD",
             "storage_id": ObjectId(sample_storage),
-            "genre": ["Action"]
+            "genre_ids": [28]
         },
         {
             "title": "Movie 2",
             "year": 2021,
             "format": "Blu-ray",
             "storage_id": ObjectId(sample_storage),
-            "genre": ["Comedy"]
+            "genre_ids": [35]
         }
     ]
     
@@ -227,15 +227,15 @@ async def test_list_movies_filter_by_genre(client, test_db, sample_storage):
     """Test filtering movies by genre."""
     # Create movies with different genres
     movies = [
-        {"title": "Action Movie", "year": 2020, "format": "DVD", "storage_id": ObjectId(sample_storage), "genre": ["Action", "Thriller"]},
-        {"title": "Comedy Movie", "year": 2021, "format": "Blu-ray", "storage_id": ObjectId(sample_storage), "genre": ["Comedy"]}
+        {"title": "Action Movie", "year": 2020, "format": "DVD", "storage_id": ObjectId(sample_storage), "genre_ids": [28, 53]},
+        {"title": "Comedy Movie", "year": 2021, "format": "Blu-ray", "storage_id": ObjectId(sample_storage), "genre_ids": [35]}
     ]
     
     for movie in movies:
         await test_db.movies.insert_one(movie)
     
     # Filter by Action genre
-    response = await client.get("/api/movies/?genre=Action")
+    response = await client.get("/api/movies/?genre_id=28")
     
     assert response.status_code == 200
     data = response.json()
@@ -319,17 +319,17 @@ async def test_update_movie_clear_genres(client, test_db, sample_storage):
         "year": 2020,
         "format": "DVD",
         "storage_id": ObjectId(sample_storage),
-        "genre": ["Action", "Thriller"]
+        "genre_ids": [28, 53]
     }
     result = await test_db.movies.insert_one(movie_data)
     movie_id = str(result.inserted_id)
 
     # Clear all genres by sending an empty list
-    response = await client.put(f"/api/movies/{movie_id}", json={"genre": []})
+    response = await client.put(f"/api/movies/{movie_id}", json={"genre_ids": []})
 
     assert response.status_code == 200
     data = response.json()
-    assert data["genre"] == [] or data["genre"] is None
+    assert data["genre_ids"] == [] or data["genre_ids"] is None
 
 
 async def test_update_movie_storage_location(client, test_db):
@@ -457,7 +457,7 @@ async def test_delete_movie_invalid_id(client):
 async def test_create_movie_auto_enriches_from_tmdb(client, sample_storage, mock_tmdb_service):
     """Movie with tmdb_id and no genre/runtime/cover gets auto-enriched from TMDB."""
     mock_tmdb_service.get_movie_details = AsyncMock(return_value={
-        "genre_names": ["Action", "Sci-Fi"],
+        "genre_ids": [28, 878],
         "runtime": 136,
         "poster_url": "https://tmdb.example.com/poster.jpg"
     })
@@ -473,7 +473,7 @@ async def test_create_movie_auto_enriches_from_tmdb(client, sample_storage, mock
 
     assert response.status_code == 201
     data = response.json()
-    assert data["genre"] == ["Action", "Sci-Fi"]
+    assert data["genre_ids"] == [28, 878]
     assert data["runtime"] == 136
     assert data["cover_image"] == "https://tmdb.example.com/poster.jpg"
     mock_tmdb_service.get_movie_details.assert_called_once_with(603)
@@ -482,7 +482,7 @@ async def test_create_movie_auto_enriches_from_tmdb(client, sample_storage, mock
 async def test_create_movie_tmdb_does_not_overwrite_manual_fields(client, sample_storage, mock_tmdb_service):
     """Manually supplied fields are preserved even when TMDB returns data."""
     mock_tmdb_service.get_movie_details = AsyncMock(return_value={
-        "genre_names": ["Action", "Sci-Fi"],
+        "genre_ids": [28, 878],
         "runtime": 136,
         "poster_url": "https://tmdb.example.com/poster.jpg"
     })
@@ -493,7 +493,7 @@ async def test_create_movie_tmdb_does_not_overwrite_manual_fields(client, sample
         "format": MediaFormat.BLURAY.value,
         "storage_id": sample_storage,
         "tmdb_id": 603,
-        "genre": ["Drama"],
+        "genre_ids": [18],
         "runtime": 200,
         "cover_image": "https://manual.example.com/poster.jpg"
     }
@@ -502,7 +502,7 @@ async def test_create_movie_tmdb_does_not_overwrite_manual_fields(client, sample
     assert response.status_code == 201
     data = response.json()
     # Manual values should be preserved
-    assert data["genre"] == ["Drama"]
+    assert data["genre_ids"] == [18]
     assert data["runtime"] == 200
     assert data["cover_image"] == "https://manual.example.com/poster.jpg"
     # TMDB should not be called because all enrichable fields are already set
@@ -526,7 +526,7 @@ async def test_create_movie_succeeds_when_tmdb_fails(client, sample_storage, moc
     data = response.json()
     assert data["title"] == "The Matrix"
     # Enrichable fields absent because TMDB failed
-    assert data["genre"] is None
+    assert data["genre_ids"] is None
     assert data["runtime"] is None
     assert data["cover_image"] is None
 
@@ -553,7 +553,7 @@ async def test_create_movie_all_fields_set_skips_tmdb(client, sample_storage, mo
         "format": MediaFormat.BLURAY.value,
         "storage_id": sample_storage,
         "tmdb_id": 603,
-        "genre": ["Action"],
+        "genre_ids": [28],
         "runtime": 136,
         "cover_image": "https://example.com/poster.jpg"
     }

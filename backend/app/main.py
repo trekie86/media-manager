@@ -10,8 +10,10 @@ from fastapi.middleware.httpsredirect import HTTPSRedirectMiddleware
 
 from app.core.config import settings
 from app.db import connect_to_mongo, close_mongo_connection
+from app.db.connection import get_database
 from app.api import api_router
 from app.services.tmdb import init_tmdb_service, cleanup_tmdb_service
+from app.services.genre import seed_genres, migrate_string_genres
 from app.models.responses import HealthResponse
 
 
@@ -23,6 +25,12 @@ async def lifespan(app: FastAPI):
     # Startup: Initialize database connection and services
     await connect_to_mongo()
     await init_tmdb_service()
+
+    # Seed canonical TMDB genre list and migrate any legacy string genres
+    db = get_database()
+    await seed_genres(db)
+    await migrate_string_genres(db)
+
     yield
     # Shutdown: Close database connection and cleanup services
     await cleanup_tmdb_service()
@@ -162,6 +170,12 @@ app = FastAPI(
                 "description": "Authentication Guide",
                 "url": "https://docs.mediamanager.local/auth",
             },
+        },
+        {
+            "name": "genres",
+            "description": (
+                "Genre catalogue — pre-seeded from TMDB, grows via auto-discovery"
+            ),
         },
         {
             "name": "movies",
