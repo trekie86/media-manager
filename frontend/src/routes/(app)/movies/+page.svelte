@@ -522,7 +522,7 @@
 		<button class="absolute inset-0 bg-black/50 w-full" onclick={closeModal} aria-label="Close dialog"></button>
 
 		<!-- Modal -->
-		<div class="relative bg-white dark:bg-surface-800 rounded-2xl shadow-2xl w-full max-w-lg max-h-[90vh] overflow-y-auto">
+		<div class="relative bg-white dark:bg-surface-800 rounded-2xl shadow-2xl w-full max-w-lg max-h-[90vh] flex flex-col">
 			<div class="sticky top-0 bg-white dark:bg-surface-800 px-6 py-4 border-b border-surface-200 dark:border-surface-700 flex items-center justify-between">
 				<h3 class="text-lg font-semibold text-surface-900 dark:text-surface-50">
 					{editMovie ? 'Edit Movie' : 'Add Movie'}
@@ -530,7 +530,7 @@
 				<button onclick={closeModal} class="text-surface-400 hover:text-surface-600 dark:hover:text-surface-200 text-xl leading-none">✕</button>
 			</div>
 
-			<div class="px-6 py-5 space-y-5">
+			<div class="px-6 py-5 space-y-5 overflow-y-auto flex-1 scrollbar-enhanced">
 				<!-- TMDB Search -->
 				<div>
 					<p class="text-xs font-medium text-surface-500 uppercase tracking-wide mb-2">Quick fill from TMDB</p>
@@ -584,8 +584,8 @@
 					</div>
 				{/if}
 
-				<form id="movie-form" onsubmit={handleSave} class="space-y-4">
-					<div class="grid grid-cols-2 gap-4">
+				<form id="movie-form" onsubmit={handleSave} class="space-y-4 overflow-visible">
+					<div class="grid grid-cols-2 gap-4 overflow-visible">
 						<div class="col-span-2">
 							<label for="form-title" class="block text-sm font-medium text-surface-700 dark:text-surface-300 mb-1">
 								Title <span class="text-error-500">*</span>
@@ -661,16 +661,18 @@
 							/>
 						</div>
 
-						<div>
+						<div class="col-span-2 overflow-visible">
 							<label class="block text-sm font-medium text-surface-700 dark:text-surface-300 mb-1">
 								Genres
 							</label>
-							<MultiSelect
-								options={allGenres.map((g) => g.name)}
-								bind:selected={selectedGenreNames}
-								placeholder="Select genres…"
-								style="width: 100%; font-size: 0.875rem;"
-							/>
+							<div class="relative overflow-visible">
+								<MultiSelect
+									options={allGenres.map((g) => g.name)}
+									bind:selected={selectedGenreNames}
+									placeholder="Select genres…"
+									style="width: 100%; font-size: 0.875rem;"
+								/>
+							</div>
 						</div>
 
 						<div class="col-span-2">

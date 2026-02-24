@@ -5,3 +5,43 @@
    bypassing wildcard subpath export resolution which the CSS bundler doesn't support. */
 @import "../node_modules/@skeletonlabs/skeleton/src/themes/cerberus.css";
 @import "../node_modules/@skeletonlabs/skeleton/src/index.css";
+
+/* Enhanced scrollbar styling for better visibility */
+.scrollbar-enhanced {
+	scrollbar-color: #9ca3af #f3f4f6;
+	scrollbar-width: thin;
+}
+
+.dark .scrollbar-enhanced {
+	scrollbar-color: #4b5563 #1f2937;
+}
+
+/* Webkit browsers (Chrome, Safari, Edge) */
+.scrollbar-enhanced::-webkit-scrollbar {
+	width: 8px;
+}
+
+.scrollbar-enhanced::-webkit-scrollbar-track {
+	background: #f3f4f6;
+}
+
+.scrollbar-enhanced::-webkit-scrollbar-thumb {
+	background: #9ca3af;
+	border-radius: 4px;
+}
+
+.scrollbar-enhanced::-webkit-scrollbar-thumb:hover {
+	background: #6b7280;
+}
+
+.dark .scrollbar-enhanced::-webkit-scrollbar-track {
+	background: #1f2937;
+}
+
+.dark .scrollbar-enhanced::-webkit-scrollbar-thumb {
+	background: #4b5563;
+}
+
+.dark .scrollbar-enhanced::-webkit-scrollbar-thumb:hover {
+	background: #6b7280;
+}
