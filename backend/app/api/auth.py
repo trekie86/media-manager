@@ -1,37 +1,54 @@
-"""Authentication routes for user registration and login."""
+"""Authentication routes using OAuth 2.0 (Google and GitHub)."""
 
 from datetime import datetime, timedelta, timezone
-from typing import Optional
+from typing import List, Optional
 from uuid import uuid4
 
-import bcrypt
+from authlib.integrations.starlette_client import OAuth
+from bson import ObjectId
 from fastapi import APIRouter, Depends, HTTPException, status
-from fastapi.security import OAuth2PasswordBearer
-from jose import JWTError, jwt
-from pymongo.errors import DuplicateKeyError
+from fastapi.responses import RedirectResponse
+from starlette.requests import Request
 
 from app.core.config import get_settings
+from app.core.deps import get_current_user, require_admin
 from app.db.connection import get_database
-from app.models.user import UserCreate, UserInDB, UserLogin, UserResponse, TokenResponse
+from app.models.user import UserInDB, UserResponse, UserRole, UserStatus, OAuthProvider
 
 # Setup router
 router = APIRouter()
 
-# Security utilities
-oauth2_scheme = OAuth2PasswordBearer(tokenUrl="api/auth/login")
+# Authlib OAuth registry — clients are registered lazily on first use
+oauth = OAuth()
+_oauth_initialized = False
 
 
-# Password utilities
-def verify_password(plain_password: str, hashed_password: str) -> bool:
-    """Verify a password against its hash."""
-    return bcrypt.checkpw(
-        plain_password.encode("utf-8"), hashed_password.encode("utf-8")
+def _init_oauth():
+    """Register Google and GitHub OAuth clients using current settings."""
+    global _oauth_initialized
+    if _oauth_initialized:
+        return
+    settings = get_settings()
+
+    oauth.register(
+        name="google",
+        client_id=settings.GOOGLE_CLIENT_ID,
+        client_secret=settings.GOOGLE_CLIENT_SECRET,
+        server_metadata_url="https://accounts.google.com/.well-known/openid-configuration",
+        client_kwargs={"scope": "openid email profile"},
     )
 
+    oauth.register(
+        name="github",
+        client_id=settings.GITHUB_CLIENT_ID,
+        client_secret=settings.GITHUB_CLIENT_SECRET,
+        access_token_url="https://github.com/login/oauth/access_token",
+        authorize_url="https://github.com/login/oauth/authorize",
+        api_base_url="https://api.github.com/",
+        client_kwargs={"scope": "read:user user:email"},
+    )
 
-def get_password_hash(password: str) -> str:
-    """Generate password hash."""
-    return bcrypt.hashpw(password.encode("utf-8"), bcrypt.gensalt()).decode("utf-8")
+    _oauth_initialized = True
 
 
 # Token utilities
@@ -40,12 +57,11 @@ def create_access_token(data: dict, expires_delta: Optional[timedelta] = None) -
     settings = get_settings()
     to_encode = data.copy()
 
-    # Add token ID for revocation capability
     to_encode.update(
         {
-            "jti": str(uuid4()),  # JWT ID
-            "iat": datetime.now(timezone.utc),  # Issued at
-            "iss": "media-manager-api",  # Issuer
+            "jti": str(uuid4()),
+            "iat": datetime.now(timezone.utc),
+            "iss": "media-manager-api",
         }
     )
 
@@ -57,134 +73,246 @@ def create_access_token(data: dict, expires_delta: Optional[timedelta] = None) -
         )
 
     to_encode.update({"exp": expire})
-    encoded_jwt = jwt.encode(
-        to_encode, settings.SECRET_KEY, algorithm=settings.ALGORITHM
-    )
+
+    from jose import jwt
+    encoded_jwt = jwt.encode(to_encode, settings.SECRET_KEY, algorithm=settings.ALGORITHM)
     return encoded_jwt
 
 
-async def get_current_user(
-    token: str = Depends(oauth2_scheme), db=Depends(get_database)
+async def _upsert_user(
+    db,
+    provider: str,
+    provider_id: str,
+    email: str,
+    display_name: str,
+    avatar_url: Optional[str],
 ) -> UserInDB:
-    """
-    Authentication middleware to get current user from JWT token.
-    """
-    credentials_exception = HTTPException(
-        status_code=status.HTTP_401_UNAUTHORIZED,
-        detail="Could not validate credentials",
-        headers={"WWW-Authenticate": "Bearer"},
+    """Find or create a user. Applies ADMIN_EMAILS bootstrap logic on first login."""
+    settings = get_settings()
+    now = datetime.now(timezone.utc)
+
+    existing = await db.users.find_one({"provider": provider, "provider_id": provider_id})
+    if existing:
+        await db.users.update_one(
+            {"_id": existing["_id"]},
+            {"$set": {"last_login": now, "display_name": display_name, "avatar_url": avatar_url}},
+        )
+        existing.update({"last_login": now, "display_name": display_name, "avatar_url": avatar_url})
+        return UserInDB(**existing)
+
+    role = UserRole.admin if email in settings.ADMIN_EMAILS else UserRole.read_only
+    user_status = UserStatus.approved if email in settings.ADMIN_EMAILS else UserStatus.pending
+
+    new_user = UserInDB(
+        email=email,
+        display_name=display_name,
+        avatar_url=avatar_url,
+        provider=OAuthProvider(provider),
+        provider_id=provider_id,
+        role=role,
+        status=user_status,
+        created_at=now,
+        last_login=now,
     )
+    doc = new_user.model_dump(exclude_none=True)
+    await db.users.insert_one(doc)
+    return new_user
+
+
+# ─── Google OAuth ────────────────────────────────────────────────────────────
+
+@router.get("/google/login")
+async def google_login(request: Request):
+    """Redirect to Google OAuth consent screen."""
+    _init_oauth()
+    settings = get_settings()
+    redirect_uri = f"{settings.BACKEND_URL}/api/auth/google/callback"
+    return await oauth.google.authorize_redirect(request, redirect_uri)
+
+
+@router.get("/google/callback")
+async def google_callback(request: Request, db=Depends(get_database)):
+    """Handle Google OAuth callback, create/update user, issue JWT, redirect to frontend."""
+    _init_oauth()
+    settings = get_settings()
 
     try:
-        settings = get_settings()
-        payload = jwt.decode(
-            token, settings.SECRET_KEY, algorithms=[settings.ALGORITHM]
-        )
-        username: Optional[str] = payload.get("sub")
-        if username is None:
-            raise credentials_exception
-    except JWTError:
-        raise credentials_exception
+        token = await oauth.google.authorize_access_token(request)
+    except Exception:
+        return RedirectResponse(f"{settings.FRONTEND_URL}/login?error=oauth_failed")
 
-    # Get user from database
-    user_doc = await db.users.find_one({"username": username})
-    if user_doc is None:
-        raise credentials_exception
+    userinfo = token.get("userinfo")
+    if not userinfo:
+        try:
+            userinfo = await oauth.google.userinfo(token=token)
+        except Exception:
+            return RedirectResponse(f"{settings.FRONTEND_URL}/login?error=oauth_failed")
 
-    return UserInDB(**user_doc)
+    email = userinfo.get("email")
+    if not email:
+        return RedirectResponse(f"{settings.FRONTEND_URL}/login?error=no_email")
 
-
-async def get_current_active_user(
-    current_user: UserInDB = Depends(get_current_user),
-) -> UserInDB:
-    """
-    Get current active user (can be extended to check if user is disabled/banned).
-    """
-    # For now, all users are considered active
-    # In the future, you could add an 'is_active' field to the user model
-    return current_user
-
-
-@router.post(
-    "/register", response_model=UserResponse, status_code=status.HTTP_201_CREATED
-)
-async def register_user(user_data: UserCreate, db=Depends(get_database)):
-    """Register a new user."""
-    # Check if username exists
-    if await db.users.find_one({"username": user_data.username}):
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Username already registered",
-        )
-
-    # Create user document
-    user_in_db = UserInDB(
-        **user_data.model_dump(exclude={"password"}),
-        password_hash=get_password_hash(user_data.password),
+    user = await _upsert_user(
+        db,
+        provider="google",
+        provider_id=userinfo["sub"],
+        email=email,
+        display_name=userinfo.get("name") or email,
+        avatar_url=userinfo.get("picture"),
     )
 
+    jwt_token = create_access_token(
+        {"sub": user.email, "role": user.role.value, "status": user.status.value}
+    )
+    return RedirectResponse(f"{settings.FRONTEND_URL}/login/callback?token={jwt_token}")
+
+
+# ─── GitHub OAuth ─────────────────────────────────────────────────────────────
+
+@router.get("/github/login")
+async def github_login(request: Request):
+    """Redirect to GitHub OAuth consent screen."""
+    _init_oauth()
+    settings = get_settings()
+    redirect_uri = f"{settings.BACKEND_URL}/api/auth/github/callback"
+    return await oauth.github.authorize_redirect(request, redirect_uri)
+
+
+@router.get("/github/callback")
+async def github_callback(request: Request, db=Depends(get_database)):
+    """Handle GitHub OAuth callback, create/update user, issue JWT, redirect to frontend."""
+    _init_oauth()
+    settings = get_settings()
+
     try:
-        await db.users.insert_one(user_in_db.model_dump(exclude_none=True))
-    except DuplicateKeyError:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Username already registered",
-        )
+        token = await oauth.github.authorize_access_token(request)
+    except Exception:
+        return RedirectResponse(f"{settings.FRONTEND_URL}/login?error=oauth_failed")
 
-    return UserResponse(**user_in_db.model_dump(exclude={"password_hash"}))
+    # Fetch GitHub user profile
+    try:
+        resp = await oauth.github.get("user", token=token)
+        profile = resp.json()
+    except Exception:
+        return RedirectResponse(f"{settings.FRONTEND_URL}/login?error=oauth_failed")
+
+    # GitHub may hide the primary email — fetch emails list if needed
+    email = profile.get("email")
+    if not email:
+        try:
+            emails_resp = await oauth.github.get("user/emails", token=token)
+            emails = emails_resp.json()
+            primary = next(
+                (e["email"] for e in emails if e.get("primary") and e.get("verified")),
+                None,
+            )
+            email = primary
+        except Exception:
+            pass
+
+    if not email:
+        return RedirectResponse(f"{settings.FRONTEND_URL}/login?error=no_email")
+
+    user = await _upsert_user(
+        db,
+        provider="github",
+        provider_id=str(profile["id"]),
+        email=email,
+        display_name=profile.get("name") or profile.get("login") or email,
+        avatar_url=profile.get("avatar_url"),
+    )
+
+    jwt_token = create_access_token(
+        {"sub": user.email, "role": user.role.value, "status": user.status.value}
+    )
+    return RedirectResponse(f"{settings.FRONTEND_URL}/login/callback?token={jwt_token}")
 
 
-@router.post("/login", response_model=TokenResponse)
-async def login(form_data: UserLogin, db=Depends(get_database)):
-    """Authenticate user and return JWT token."""
-    # Find user
-    user_doc = await db.users.find_one({"username": form_data.username})
-    if not user_doc:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Invalid username or password",
-            headers={"WWW-Authenticate": "Bearer"},
-        )
-
-    user = UserInDB(**user_doc)
-
-    # Verify password
-    if not verify_password(form_data.password, user.password_hash):
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Invalid username or password",
-            headers={"WWW-Authenticate": "Bearer"},
-        )
-
-    # Create access token
-    access_token = create_access_token(data={"sub": user.username})
-
-    return TokenResponse(access_token=access_token, token_type="bearer")
-
-
-@router.post("/logout")
-async def logout(current_user: UserInDB = Depends(get_current_active_user)):
-    """
-    Logout endpoint - in a stateless JWT system, logout is handled client-side
-    by removing the token. This endpoint can be used for logging purposes.
-    """
-    return {"message": f"User {current_user.username} logged out successfully"}
-
+# ─── User endpoints ───────────────────────────────────────────────────────────
 
 @router.get("/me", response_model=UserResponse)
 async def get_current_user_info(
-    current_user: UserInDB = Depends(get_current_active_user),
+    current_user: UserInDB = Depends(get_current_user),
 ):
-    """Get current user information."""
-    return UserResponse(**current_user.model_dump(exclude={"password_hash"}))
+    """Get current authenticated user's information."""
+    return UserResponse(
+        email=current_user.email,
+        display_name=current_user.display_name,
+        avatar_url=current_user.avatar_url,
+        role=current_user.role,
+        status=current_user.status,
+    )
 
 
-@router.post("/refresh", response_model=TokenResponse)
-async def refresh_token(current_user: UserInDB = Depends(get_current_active_user)):
-    """
-    Refresh the access token for the current user.
-    This creates a new token with a fresh expiration time.
-    """
-    access_token = create_access_token(data={"sub": current_user.username})
+@router.post("/logout")
+async def logout(current_user: UserInDB = Depends(get_current_user)):
+    """Logout endpoint — tokens are stateless; this signals the client to clear state."""
+    return {"message": f"User {current_user.email} logged out successfully"}
 
-    return TokenResponse(access_token=access_token, token_type="bearer")
+
+# ─── Admin endpoints ──────────────────────────────────────────────────────────
+
+@router.get("/users/pending", response_model=List[UserResponse])
+async def list_pending_users(
+    admin: UserInDB = Depends(require_admin),
+    db=Depends(get_database),
+):
+    """List all users awaiting approval. Admin only."""
+    cursor = db.users.find({"status": UserStatus.pending.value})
+    docs = await cursor.to_list(length=1000)
+    return [
+        UserResponse(
+            email=d["email"],
+            display_name=d["display_name"],
+            avatar_url=d.get("avatar_url"),
+            role=UserRole(d["role"]),
+            status=UserStatus(d["status"]),
+        )
+        for d in docs
+    ]
+
+
+@router.post("/users/{user_id}/approve", response_model=UserResponse)
+async def approve_user(
+    user_id: str,
+    admin: UserInDB = Depends(require_admin),
+    db=Depends(get_database),
+):
+    """Set user status to approved. Admin only."""
+    try:
+        oid = ObjectId(user_id)
+    except Exception:
+        raise HTTPException(status_code=400, detail="Invalid user ID format")
+
+    result = await db.users.find_one_and_update(
+        {"_id": oid},
+        {"$set": {"status": UserStatus.approved.value}},
+        return_document=True,
+    )
+    if not result:
+        raise HTTPException(status_code=404, detail="User not found")
+
+    return UserResponse(
+        email=result["email"],
+        display_name=result["display_name"],
+        avatar_url=result.get("avatar_url"),
+        role=UserRole(result["role"]),
+        status=UserStatus(result["status"]),
+    )
+
+
+@router.post("/users/{user_id}/reject", status_code=204)
+async def reject_user(
+    user_id: str,
+    admin: UserInDB = Depends(require_admin),
+    db=Depends(get_database),
+):
+    """Delete a pending user. Admin only."""
+    try:
+        oid = ObjectId(user_id)
+    except Exception:
+        raise HTTPException(status_code=400, detail="Invalid user ID format")
+
+    result = await db.users.delete_one({"_id": oid})
+    if result.deleted_count == 0:
+        raise HTTPException(status_code=404, detail="User not found")

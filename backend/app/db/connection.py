@@ -40,7 +40,7 @@ async def connect_to_mongo() -> None:
 
 async def create_indexes():
     """Create database indexes for performance."""
-    await db.users.create_index("username", unique=True)
+    await db.users.create_index([("provider", 1), ("provider_id", 1)], unique=True)
     await db.users.create_index("email", unique=True, sparse=True)
     await db.movies.create_index([("title", 1), ("year", 1)])
     await db.movies.create_index("storage_id")

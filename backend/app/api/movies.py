@@ -9,8 +9,10 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 from loguru import logger
 from pymongo.errors import DuplicateKeyError
 
+from ..core.deps import require_approved, require_admin
 from ..db.connection import get_database
 from ..models.movie import MovieCreate, MovieResponse, MovieUpdate
+from ..models.user import UserInDB
 from ..services.tmdb import get_tmdb_service, TMDBService
 from ..services.genre import upsert_genres
 
@@ -56,6 +58,7 @@ async def create_movie(
     movie: MovieCreate,
     db=Depends(get_database),
     tmdb: TMDBService = Depends(get_tmdb_service),
+    _: UserInDB = Depends(require_admin),
 ) -> MovieResponse:
     """
     Create a new movie.
@@ -123,6 +126,7 @@ async def list_movies(
     format: Optional[str] = Query(None, description="Filter by media format"),
     genre_id: Optional[int] = Query(None, description="Filter by TMDB genre ID"),
     db=Depends(get_database),
+    _: UserInDB = Depends(require_approved),
 ) -> List[MovieResponse]:
     """
     List movies with optional filtering.
@@ -168,6 +172,7 @@ async def search_movies(
     format: Optional[str] = Query(None, description="Filter by media format"),
     genre_id: Optional[int] = Query(None, description="Filter by TMDB genre ID"),
     db=Depends(get_database),
+    _: UserInDB = Depends(require_approved),
 ) -> List[MovieResponse]:
     """
     Search movies by title with optional filtering.
@@ -243,6 +248,7 @@ async def search_tmdb(
     year: Optional[int] = Query(None, description="Filter by release year"),
     page: int = Query(1, ge=1, le=1000, description="Page number for pagination"),
     tmdb: TMDBService = Depends(get_tmdb_service),
+    _: UserInDB = Depends(require_approved),
 ) -> Dict[str, Any]:
     """
     Search TMDB for movie information.
@@ -256,7 +262,9 @@ async def search_tmdb(
 
 @router.get("/tmdb/{tmdb_id}", response_model=Dict[str, Any])
 async def get_tmdb_movie(
-    tmdb_id: int, tmdb: TMDBService = Depends(get_tmdb_service)
+    tmdb_id: int,
+    tmdb: TMDBService = Depends(get_tmdb_service),
+    _: UserInDB = Depends(require_approved),
 ) -> Dict[str, Any]:
     """
     Get detailed movie information from TMDB.
@@ -275,7 +283,11 @@ async def get_tmdb_movie(
 
 
 @router.get("/{movie_id}", response_model=MovieResponse)
-async def get_movie(movie_id: str, db=Depends(get_database)) -> MovieResponse:
+async def get_movie(
+    movie_id: str,
+    db=Depends(get_database),
+    _: UserInDB = Depends(require_approved),
+) -> MovieResponse:
     """
     Get a specific movie by ID.
     """
@@ -303,6 +315,7 @@ async def update_movie(
     movie_id: str,
     movie_update: MovieUpdate,
     db=Depends(get_database),
+    _: UserInDB = Depends(require_admin),
 ) -> MovieResponse:
     """
     Update an existing movie.
@@ -368,7 +381,11 @@ async def update_movie(
 
 
 @router.delete("/{movie_id}", status_code=204)
-async def delete_movie(movie_id: str, db=Depends(get_database)) -> None:
+async def delete_movie(
+    movie_id: str,
+    db=Depends(get_database),
+    _: UserInDB = Depends(require_admin),
+) -> None:
     """
     Delete a movie.
     """
@@ -395,6 +412,7 @@ async def enrich_movie_with_tmdb(
     movie_id: str,
     db=Depends(get_database),
     tmdb: TMDBService = Depends(get_tmdb_service),
+    _: UserInDB = Depends(require_admin),
 ) -> MovieResponse:
     """
     Enrich an existing movie with TMDB metadata.

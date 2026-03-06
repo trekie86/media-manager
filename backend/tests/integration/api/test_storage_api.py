@@ -7,10 +7,10 @@ from tests.helpers import assert_response, assert_error_response
 
 pytestmark = pytest.mark.asyncio
 
-async def test_create_storage_success(client, sample_storage_data):
+async def test_create_storage_success(admin_client, sample_storage_data):
     """Test successful storage creation."""
     # Make request
-    response = await client.post("/api/storage", json=sample_storage_data)
+    response = await admin_client.post("/api/storage", json=sample_storage_data)
     
     # Assert response
     assert_response(
@@ -27,14 +27,14 @@ async def test_create_storage_success(client, sample_storage_data):
     assert data["path"] == []
     assert data["parent_id"] is None
 
-async def test_create_storage_duplicate_name(client, sample_storage_data):
+async def test_create_storage_duplicate_name(admin_client, sample_storage_data):
     """Test creating storage with duplicate name fails."""
     # Create first storage
-    response = await client.post("/api/storage", json=sample_storage_data)
+    response = await admin_client.post("/api/storage", json=sample_storage_data)
     assert response.status_code == status.HTTP_201_CREATED
     
     # Try to create duplicate
-    response = await client.post("/api/storage", json=sample_storage_data)
+    response = await admin_client.post("/api/storage", json=sample_storage_data)
     
     # Assert error response
     assert_error_response(
@@ -43,10 +43,10 @@ async def test_create_storage_duplicate_name(client, sample_storage_data):
         expected_detail="Storage name already exists"
     )
 
-async def test_create_storage_with_parent(client, sample_storage_data):
+async def test_create_storage_with_parent(admin_client, sample_storage_data):
     """Test creating storage with a parent reference."""
     # Create parent storage
-    parent_response = await client.post("/api/storage", json=sample_storage_data)
+    parent_response = await admin_client.post("/api/storage", json=sample_storage_data)
     assert parent_response.status_code == status.HTTP_201_CREATED
     parent_id = parent_response.json()["id"]
     
@@ -61,7 +61,7 @@ async def test_create_storage_with_parent(client, sample_storage_data):
         }
     }
     
-    response = await client.post("/api/storage", json=child_data)
+    response = await admin_client.post("/api/storage", json=child_data)
     
     # Assert response
     assert_response(
@@ -75,7 +75,7 @@ async def test_create_storage_with_parent(client, sample_storage_data):
     assert data["parent_id"] == parent_id
     assert data["path"] == [parent_id]
 
-async def test_create_storage_invalid_parent(client, sample_storage_data):
+async def test_create_storage_invalid_parent(admin_client, sample_storage_data):
     """Test creating storage with invalid parent ID fails."""
     # Create data with non-existent parent
     invalid_parent_data = {
@@ -83,7 +83,7 @@ async def test_create_storage_invalid_parent(client, sample_storage_data):
         "parent_id": str(ObjectId())  # Random ObjectId
     }
     
-    response = await client.post("/api/storage", json=invalid_parent_data)
+    response = await admin_client.post("/api/storage", json=invalid_parent_data)
     
     # Assert error response
     assert_error_response(
@@ -92,7 +92,7 @@ async def test_create_storage_invalid_parent(client, sample_storage_data):
         expected_detail="Parent storage location not found"
     )
 
-async def test_list_storage(client, sample_storage_data):
+async def test_list_storage(admin_client, sample_storage_data):
     """Test listing storage locations."""
     # Create multiple storage items
     storage_items = [
@@ -112,17 +112,17 @@ async def test_list_storage(client, sample_storage_data):
     ]
     
     for item in storage_items:
-        response = await client.post("/api/storage", json=item)
+        response = await admin_client.post("/api/storage", json=item)
         assert response.status_code == status.HTTP_201_CREATED
     
     # Test listing all storage
-    response = await client.get("/api/storage")
+    response = await admin_client.get("/api/storage")
     assert response.status_code == status.HTTP_200_OK
     data = response.json()
     assert len(data) == 3
     
     # Test filtering by type
-    response = await client.get("/api/storage?type=cabinet")
+    response = await admin_client.get("/api/storage?type=cabinet")
     assert response.status_code == status.HTTP_200_OK
     data = response.json()
     assert len(data) == 2
@@ -137,26 +137,26 @@ async def test_list_storage(client, sample_storage_data):
         "type": "shelf",
         "parent_id": parent_id
     }
-    response = await client.post("/api/storage", json=child_data)
+    response = await admin_client.post("/api/storage", json=child_data)
     assert response.status_code == status.HTTP_201_CREATED
     
     # Now filter by parent_id
-    response = await client.get(f"/api/storage?parent_id={parent_id}")
+    response = await admin_client.get(f"/api/storage?parent_id={parent_id}")
     assert response.status_code == status.HTTP_200_OK
     data = response.json()
     assert len(data) == 1
     assert data[0]["name"] == "Child Shelf"
     assert data[0]["parent_id"] == parent_id
 
-async def test_get_storage_by_id(client, sample_storage_data):
+async def test_get_storage_by_id(admin_client, sample_storage_data):
     """Test getting a specific storage location by ID."""
     # Create a storage item
-    response = await client.post("/api/storage", json=sample_storage_data)
+    response = await admin_client.post("/api/storage", json=sample_storage_data)
     assert response.status_code == status.HTTP_201_CREATED
     storage_id = response.json()["id"]
     
     # Get the storage by ID
-    response = await client.get(f"/api/storage/{storage_id}")
+    response = await admin_client.get(f"/api/storage/{storage_id}")
     
     # Assert response
     assert_response(
@@ -171,10 +171,10 @@ async def test_get_storage_by_id(client, sample_storage_data):
     assert "movies" in data
     assert "children" in data
 
-async def test_get_storage_not_found(client):
+async def test_get_storage_not_found(admin_client):
     """Test getting a non-existent storage returns 404."""
     non_existent_id = str(ObjectId())
-    response = await client.get(f"/api/storage/{non_existent_id}")
+    response = await admin_client.get(f"/api/storage/{non_existent_id}")
     
     # Assert error response
     assert_error_response(
@@ -183,10 +183,10 @@ async def test_get_storage_not_found(client):
         expected_detail="Storage location not found"
     )
 
-async def test_get_storage_tree(client, sample_storage_data):
+async def test_get_storage_tree(admin_client, sample_storage_data):
     """Test getting a storage tree with ancestors and descendants."""
     # Create a root storage
-    root_response = await client.post("/api/storage", json=sample_storage_data)
+    root_response = await admin_client.post("/api/storage", json=sample_storage_data)
     assert root_response.status_code == status.HTTP_201_CREATED
     root_id = root_response.json()["id"]
     
@@ -197,7 +197,7 @@ async def test_get_storage_tree(client, sample_storage_data):
         "type": "shelf",
         "parent_id": root_id
     }
-    child_response = await client.post("/api/storage", json=child_data)
+    child_response = await admin_client.post("/api/storage", json=child_data)
     assert child_response.status_code == status.HTTP_201_CREATED
     child_id = child_response.json()["id"]
     
@@ -208,12 +208,12 @@ async def test_get_storage_tree(client, sample_storage_data):
         "type": "bin",
         "parent_id": child_id
     }
-    grandchild_response = await client.post("/api/storage", json=grandchild_data)
+    grandchild_response = await admin_client.post("/api/storage", json=grandchild_data)
     assert grandchild_response.status_code == status.HTTP_201_CREATED
     grandchild_id = grandchild_response.json()["id"]
     
     # Get the tree for the child
-    response = await client.get(f"/api/storage/{child_id}/tree")
+    response = await admin_client.get(f"/api/storage/{child_id}/tree")
     
     # Assert response
     assert_response(
@@ -231,10 +231,10 @@ async def test_get_storage_tree(client, sample_storage_data):
     assert len(data["children"]) == 1
     assert data["children"][0]["id"] == grandchild_id
 
-async def test_update_storage(client, sample_storage_data):
+async def test_update_storage(admin_client, sample_storage_data):
     """Test updating a storage location."""
     # Create a storage item
-    response = await client.post("/api/storage", json=sample_storage_data)
+    response = await admin_client.post("/api/storage", json=sample_storage_data)
     assert response.status_code == status.HTTP_201_CREATED
     storage_id = response.json()["id"]
     
@@ -250,7 +250,7 @@ async def test_update_storage(client, sample_storage_data):
     }
     
     # Update the storage
-    response = await client.put(f"/api/storage/{storage_id}", json=update_data)
+    response = await admin_client.put(f"/api/storage/{storage_id}", json=update_data)
     
     # Assert response
     assert_response(
@@ -267,10 +267,10 @@ async def test_update_storage(client, sample_storage_data):
     assert data["metadata"]["dimensions"] == update_data["metadata"]["dimensions"]
     assert data["metadata"]["location"] == update_data["metadata"]["location"]
 
-async def test_update_storage_parent(client, sample_storage_data):
+async def test_update_storage_parent(admin_client, sample_storage_data):
     """Test updating a storage location's parent."""
     # Create two root storage items
-    root1_response = await client.post("/api/storage", json=sample_storage_data)
+    root1_response = await admin_client.post("/api/storage", json=sample_storage_data)
     assert root1_response.status_code == status.HTTP_201_CREATED
     root1_id = root1_response.json()["id"]
     
@@ -279,7 +279,7 @@ async def test_update_storage_parent(client, sample_storage_data):
         "description": "Another cabinet",
         "type": "cabinet"
     }
-    root2_response = await client.post("/api/storage", json=root2_data)
+    root2_response = await admin_client.post("/api/storage", json=root2_data)
     assert root2_response.status_code == status.HTTP_201_CREATED
     root2_id = root2_response.json()["id"]
     
@@ -290,7 +290,7 @@ async def test_update_storage_parent(client, sample_storage_data):
         "type": "shelf",
         "parent_id": root1_id
     }
-    child_response = await client.post("/api/storage", json=child_data)
+    child_response = await admin_client.post("/api/storage", json=child_data)
     assert child_response.status_code == status.HTTP_201_CREATED
     child_id = child_response.json()["id"]
     
@@ -298,7 +298,7 @@ async def test_update_storage_parent(client, sample_storage_data):
     update_data = {
         "parent_id": root2_id
     }
-    response = await client.put(f"/api/storage/{child_id}", json=update_data)
+    response = await admin_client.put(f"/api/storage/{child_id}", json=update_data)
     
     # Assert response
     assert_response(
@@ -312,16 +312,16 @@ async def test_update_storage_parent(client, sample_storage_data):
     assert data["path"] == [root2_id]
     
     # Verify child is now under root2
-    response = await client.get(f"/api/storage?parent_id={root2_id}")
+    response = await admin_client.get(f"/api/storage?parent_id={root2_id}")
     assert response.status_code == status.HTTP_200_OK
     data = response.json()
     assert len(data) == 1
     assert data[0]["id"] == child_id
 
-async def test_update_storage_invalid_parent_cycle(client, sample_storage_data):
+async def test_update_storage_invalid_parent_cycle(admin_client, sample_storage_data):
     """Test updating a storage with invalid parent (would create cycle)."""
     # Create a root storage
-    root_response = await client.post("/api/storage", json=sample_storage_data)
+    root_response = await admin_client.post("/api/storage", json=sample_storage_data)
     assert root_response.status_code == status.HTTP_201_CREATED
     root_id = root_response.json()["id"]
     
@@ -332,7 +332,7 @@ async def test_update_storage_invalid_parent_cycle(client, sample_storage_data):
         "type": "shelf",
         "parent_id": root_id
     }
-    child_response = await client.post("/api/storage", json=child_data)
+    child_response = await admin_client.post("/api/storage", json=child_data)
     assert child_response.status_code == status.HTTP_201_CREATED
     child_id = child_response.json()["id"]
     
@@ -340,7 +340,7 @@ async def test_update_storage_invalid_parent_cycle(client, sample_storage_data):
     update_data = {
         "parent_id": child_id
     }
-    response = await client.put(f"/api/storage/{root_id}", json=update_data)
+    response = await admin_client.put(f"/api/storage/{root_id}", json=update_data)
     
     # Assert error response
     assert_error_response(
@@ -349,27 +349,27 @@ async def test_update_storage_invalid_parent_cycle(client, sample_storage_data):
         expected_detail="Cannot set a descendant as parent (would create a cycle)"
     )
 
-async def test_delete_storage(client, sample_storage_data):
+async def test_delete_storage(admin_client, sample_storage_data):
     """Test deleting a storage location."""
     # Create a storage item
-    response = await client.post("/api/storage", json=sample_storage_data)
+    response = await admin_client.post("/api/storage", json=sample_storage_data)
     assert response.status_code == status.HTTP_201_CREATED
     storage_id = response.json()["id"]
     
     # Delete the storage
-    response = await client.delete(f"/api/storage/{storage_id}")
+    response = await admin_client.delete(f"/api/storage/{storage_id}")
     
     # Assert response
     assert response.status_code == status.HTTP_204_NO_CONTENT
     
     # Verify storage is deleted
-    response = await client.get(f"/api/storage/{storage_id}")
+    response = await admin_client.get(f"/api/storage/{storage_id}")
     assert response.status_code == status.HTTP_404_NOT_FOUND
 
-async def test_delete_storage_with_children(client, sample_storage_data):
+async def test_delete_storage_with_children(admin_client, sample_storage_data):
     """Test deleting a storage with children fails."""
     # Create a root storage
-    root_response = await client.post("/api/storage", json=sample_storage_data)
+    root_response = await admin_client.post("/api/storage", json=sample_storage_data)
     assert root_response.status_code == status.HTTP_201_CREATED
     root_id = root_response.json()["id"]
     
@@ -380,11 +380,11 @@ async def test_delete_storage_with_children(client, sample_storage_data):
         "type": "shelf",
         "parent_id": root_id
     }
-    child_response = await client.post("/api/storage", json=child_data)
+    child_response = await admin_client.post("/api/storage", json=child_data)
     assert child_response.status_code == status.HTTP_201_CREATED
     
     # Try to delete the root
-    response = await client.delete(f"/api/storage/{root_id}")
+    response = await admin_client.delete(f"/api/storage/{root_id}")
     
     # Assert error response
     assert_error_response(

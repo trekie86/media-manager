@@ -2,6 +2,7 @@
 Global pytest fixtures and test utilities.
 """
 import asyncio
+from datetime import datetime, timezone
 from typing import AsyncGenerator, Generator
 from unittest.mock import AsyncMock, MagicMock
 
@@ -36,23 +37,22 @@ from app.db.connection import connect_to_mongo, close_mongo_connection
 @pytest.fixture
 async def test_db(db_client, settings) -> AsyncGenerator[AsyncIOMotorDatabase, None]:
     """Create a test database that's deleted after each test."""
-    # Use the test database
     db = db_client[settings.MONGO_DB]
-    
+
     try:
-        # Clear collections instead of dropping the database
+        # Clear collections before each test
         collections = await db.list_collection_names()
         for collection in collections:
-            if collection != "system.users":  # Skip system collections
+            if collection != "system.users":
                 await db[collection].delete_many({})
-        
-        # Initialize indexes with correct options
-        await db.users.create_index("username", unique=True)
+
+        # Initialize indexes with new OAuth-based schema
+        await db.users.create_index([("provider", 1), ("provider_id", 1)], unique=True)
         await db.users.create_index("email", unique=True, sparse=True)
-        
+
         # Initialize the database connection
         await connect_to_mongo()
-        
+
         yield db
     finally:
         await close_mongo_connection()
@@ -86,28 +86,83 @@ async def client(app) -> AsyncGenerator[AsyncClient, None]:
     async with AsyncClient(transport=ASGITransport(app=app), base_url="http://localhost") as client:
         yield client
 
-# Auth fixtures
+# Auth fixtures — bypass OAuth by inserting users directly and creating JWTs
 @pytest.fixture
-async def test_user(client, sample_user_data) -> dict:
-    """Create a test user and return their data."""
-    response = await client.post("/api/auth/register", json=sample_user_data)
-    assert response.status_code == 201
+async def sample_user_data() -> dict:
+    """Sample approved read-only user data for testing."""
+    return {
+        "email": "test@example.com",
+        "display_name": "Test User",
+        "provider": "google",
+        "provider_id": "google_123456",
+        "role": "read_only",
+        "status": "approved",
+    }
+
+@pytest.fixture
+async def sample_admin_data() -> dict:
+    """Sample admin user data for testing."""
+    return {
+        "email": "admin@example.com",
+        "display_name": "Admin User",
+        "provider": "google",
+        "provider_id": "google_admin_789",
+        "role": "admin",
+        "status": "approved",
+    }
+
+@pytest.fixture
+async def test_user(test_db, sample_user_data) -> dict:
+    """Insert a read-only approved user directly into the DB, bypassing OAuth."""
+    doc = {
+        **sample_user_data,
+        "created_at": datetime.now(timezone.utc),
+        "last_login": datetime.now(timezone.utc),
+    }
+    await test_db.users.insert_one(doc)
     return sample_user_data
 
 @pytest.fixture
-async def auth_token(client, test_user) -> str:
-    """Get an authentication token for the test user."""
-    response = await client.post("/api/auth/login", json={
-        "username": test_user["username"],
-        "password": test_user["password"]
+async def test_admin(test_db, sample_admin_data) -> dict:
+    """Insert an admin user directly into the DB, bypassing OAuth."""
+    doc = {
+        **sample_admin_data,
+        "created_at": datetime.now(timezone.utc),
+        "last_login": datetime.now(timezone.utc),
+    }
+    await test_db.users.insert_one(doc)
+    return sample_admin_data
+
+@pytest.fixture
+def auth_token(test_user) -> str:
+    """Create a JWT directly for the read-only test user, bypassing OAuth."""
+    from app.api.auth import create_access_token
+    return create_access_token({
+        "sub": test_user["email"],
+        "role": test_user["role"],
+        "status": test_user["status"],
     })
-    assert response.status_code == 200
-    return response.json()["access_token"]
+
+@pytest.fixture
+def admin_token(test_admin) -> str:
+    """Create a JWT directly for the admin test user, bypassing OAuth."""
+    from app.api.auth import create_access_token
+    return create_access_token({
+        "sub": test_admin["email"],
+        "role": test_admin["role"],
+        "status": test_admin["status"],
+    })
 
 @pytest.fixture
 async def auth_client(client, auth_token) -> AsyncClient:
-    """Get an authenticated client for testing protected endpoints."""
+    """Get an authenticated client (read-only user) for testing protected endpoints."""
     client.headers["Authorization"] = f"Bearer {auth_token}"
+    return client
+
+@pytest.fixture
+async def admin_client(client, admin_token) -> AsyncClient:
+    """Get an authenticated client (admin user) for testing write endpoints."""
+    client.headers["Authorization"] = f"Bearer {admin_token}"
     return client
 
 # Test data fixtures
@@ -137,15 +192,6 @@ async def sample_storage_data() -> dict:
             "dimensions": "100x50x200cm",
             "location": "Living Room"
         }
-    }
-
-@pytest.fixture
-async def sample_user_data() -> dict:
-    """Sample user data for testing."""
-    return {
-        "username": "testuser",
-        "email": "test@example.com",
-        "password": "SecurePassword123"
     }
 
 # Utility functions
