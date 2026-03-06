@@ -561,3 +561,66 @@ async def test_create_movie_all_fields_set_skips_tmdb(client, sample_storage, mo
 
     assert response.status_code == 201
     mock_tmdb_service.get_movie_details.assert_not_called()
+
+
+# ---------------------------------------------------------------------------
+# MovieUpdate field validator coverage
+# ---------------------------------------------------------------------------
+
+
+@pytest.fixture
+async def existing_movie(client, sample_movie_data):
+    """Create a movie via the API and return its ID string."""
+    response = await client.post("/api/movies/", json=sample_movie_data)
+    assert response.status_code == 201
+    return response.json()["id"]
+
+
+async def test_update_movie_invalid_year_too_early(client, existing_movie):
+    """year < 1900 must be rejected with 422."""
+    response = await client.put(
+        f"/api/movies/{existing_movie}", json={"year": 1800}
+    )
+    assert response.status_code == 422
+
+
+async def test_update_movie_invalid_year_too_late(client, existing_movie):
+    """year > 2100 must be rejected with 422."""
+    response = await client.put(
+        f"/api/movies/{existing_movie}", json={"year": 2200}
+    )
+    assert response.status_code == 422
+
+
+async def test_update_movie_negative_runtime_rejected(client, existing_movie):
+    """runtime < 0 must be rejected with 422."""
+    response = await client.put(
+        f"/api/movies/{existing_movie}", json={"runtime": -5}
+    )
+    assert response.status_code == 422
+
+
+async def test_update_movie_invalid_format_rejected(client, existing_movie):
+    """An unknown format string must be rejected with 422."""
+    response = await client.put(
+        f"/api/movies/{existing_movie}", json={"format": "VHS"}
+    )
+    assert response.status_code == 422
+
+
+async def test_update_movie_valid_boundary_year(client, existing_movie):
+    """year == 1900 is the lower boundary and must be accepted."""
+    response = await client.put(
+        f"/api/movies/{existing_movie}", json={"year": 1900}
+    )
+    assert response.status_code == 200
+    assert response.json()["year"] == 1900
+
+
+async def test_update_movie_zero_runtime_accepted(client, existing_movie):
+    """runtime == 0 is the lower boundary (ge=0) and must be accepted."""
+    response = await client.put(
+        f"/api/movies/{existing_movie}", json={"runtime": 0}
+    )
+    assert response.status_code == 200
+    assert response.json()["runtime"] == 0

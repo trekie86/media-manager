@@ -372,7 +372,7 @@ async def test_delete_storage_with_children(client, sample_storage_data):
     root_response = await client.post("/api/storage", json=sample_storage_data)
     assert root_response.status_code == status.HTTP_201_CREATED
     root_id = root_response.json()["id"]
-    
+
     # Create a child storage
     child_data = {
         "name": "Child Shelf",
@@ -382,13 +382,81 @@ async def test_delete_storage_with_children(client, sample_storage_data):
     }
     child_response = await client.post("/api/storage", json=child_data)
     assert child_response.status_code == status.HTTP_201_CREATED
-    
+
     # Try to delete the root
     response = await client.delete(f"/api/storage/{root_id}")
-    
+
     # Assert error response
     assert_error_response(
         response,
         expected_status_code=status.HTTP_400_BAD_REQUEST,
         expected_detail="Cannot delete storage with children. Delete children first."
     )
+
+
+# ---------------------------------------------------------------------------
+# Cascading path updates when a node is moved to a new parent
+# ---------------------------------------------------------------------------
+
+
+async def test_move_node_updates_immediate_children_tree(client, sample_storage_data):
+    """
+    Moving a storage node to a new parent must be reflected in the tree view
+    of the new parent — its descendants must include the moved node.
+    """
+    root_a = (await client.post("/api/storage", json={**sample_storage_data, "name": "Root A"})).json()
+    root_b = (await client.post("/api/storage", json={**sample_storage_data, "name": "Root B"})).json()
+    child = (await client.post("/api/storage", json={
+        "name": "Child Shelf",
+        "type": "shelf",
+        "parent_id": root_a["id"],
+    })).json()
+
+    # Move Child from Root A → Root B
+    move_response = await client.put(f"/api/storage/{child['id']}", json={"parent_id": root_b["id"]})
+    assert move_response.status_code == status.HTTP_200_OK
+
+    # Root B's tree must now contain Child as a descendant
+    tree_b = (await client.get(f"/api/storage/{root_b['id']}/tree")).json()
+    descendant_ids = [d["id"] for d in tree_b.get("descendants", [])]
+    assert child["id"] in descendant_ids
+
+    # Root A's tree must no longer contain Child
+    tree_a = (await client.get(f"/api/storage/{root_a['id']}/tree")).json()
+    descendant_ids_a = [d["id"] for d in tree_a.get("descendants", [])]
+    assert child["id"] not in descendant_ids_a
+
+
+async def test_move_node_deep_descendant_path_updated(client, sample_storage_data):
+    """
+    When a node with children is moved, all grandchildren must appear under
+    the new location in the tree — verifying multi-level cascading path updates.
+    """
+    root_a = (await client.post("/api/storage", json={**sample_storage_data, "name": "GrandRoot A"})).json()
+    root_b = (await client.post("/api/storage", json={**sample_storage_data, "name": "GrandRoot B"})).json()
+    parent = (await client.post("/api/storage", json={
+        "name": "Parent Shelf",
+        "type": "shelf",
+        "parent_id": root_a["id"],
+    })).json()
+    grandchild = (await client.post("/api/storage", json={
+        "name": "Grandchild Bin",
+        "type": "bin",
+        "parent_id": parent["id"],
+    })).json()
+
+    # Move Parent (and implicitly Grandchild) from Root A → Root B
+    move_response = await client.put(f"/api/storage/{parent['id']}", json={"parent_id": root_b["id"]})
+    assert move_response.status_code == status.HTTP_200_OK
+
+    # Root B's tree must contain both Parent and Grandchild
+    tree_b = (await client.get(f"/api/storage/{root_b['id']}/tree")).json()
+    descendant_ids = [d["id"] for d in tree_b.get("descendants", [])]
+    assert parent["id"] in descendant_ids
+    assert grandchild["id"] in descendant_ids
+
+    # Root A's tree must contain neither
+    tree_a = (await client.get(f"/api/storage/{root_a['id']}/tree")).json()
+    descendant_ids_a = [d["id"] for d in tree_a.get("descendants", [])]
+    assert parent["id"] not in descendant_ids_a
+    assert grandchild["id"] not in descendant_ids_a

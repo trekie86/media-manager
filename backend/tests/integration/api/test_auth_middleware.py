@@ -187,14 +187,48 @@ class TestSessionManagement:
         # Use the auth_token fixture which already handles user creation and login
         # Decode token to verify claims
         from app.core.config import get_settings
-        
+
         settings = get_settings()
         decoded = jwt.decode(
             auth_token,
             settings.SECRET_KEY,
             algorithms=[settings.ALGORITHM]
         )
-        
+
         assert "sub" in decoded
         assert "exp" in decoded
         assert decoded["sub"] == test_user["username"]
+
+    async def test_token_expiry_is_in_the_future(self, client: AsyncClient, auth_token):
+        """Freshly issued tokens must have an expiry timestamp in the future."""
+        import time
+        from app.core.config import get_settings
+
+        settings = get_settings()
+        decoded = jwt.decode(
+            auth_token,
+            settings.SECRET_KEY,
+            algorithms=[settings.ALGORITHM]
+        )
+
+        assert decoded["exp"] > int(time.time())
+
+    async def test_refresh_issues_a_different_token(self, client: AsyncClient, auth_token):
+        """Token refresh must return a new token string, not the same one."""
+        headers = {"Authorization": f"Bearer {auth_token}"}
+        response = await client.post("/api/auth/refresh", headers=headers)
+
+        assert response.status_code == status.HTTP_200_OK
+        new_token = response.json()["access_token"]
+        assert new_token != auth_token
+
+    async def test_original_token_still_valid_after_refresh(
+        self, client: AsyncClient, auth_token
+    ):
+        """The old token remains usable after a refresh (no server-side blacklist)."""
+        headers = {"Authorization": f"Bearer {auth_token}"}
+        await client.post("/api/auth/refresh", headers=headers)
+
+        # Original token should still work
+        me_response = await client.get("/api/auth/me", headers=headers)
+        assert me_response.status_code == status.HTTP_200_OK
