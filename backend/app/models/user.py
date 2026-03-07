@@ -1,13 +1,29 @@
 """
-User models for request/response handling and authentication.
+User models for OAuth authentication and role-based access control.
 """
 
-import re
+from datetime import datetime
+from enum import Enum
 from typing import Optional
 
-from pydantic import Field, EmailStr, field_validator
+from pydantic import Field, EmailStr
 
 from .base import MongoModel
+
+
+class OAuthProvider(str, Enum):
+    google = "google"
+    github = "github"
+
+
+class UserRole(str, Enum):
+    admin = "admin"
+    read_only = "read_only"
+
+
+class UserStatus(str, Enum):
+    pending = "pending"
+    approved = "approved"
 
 
 # Auth specific models
@@ -18,78 +34,25 @@ class TokenResponse(MongoModel):
     token_type: str = Field("bearer", description="Token type")
 
 
-class UserLogin(MongoModel):
-    """User login request model."""
+class UserInDB(MongoModel):
+    """Model for user as stored in database."""
 
-    username: str = Field(..., description="Username for login")
-    password: str = Field(..., description="Password")
-
-
-class UserBase(MongoModel):
-    """
-    Base user model with shared attributes.
-    """
-
-    username: str = Field(..., description="Username for login")
-    email: Optional[EmailStr] = Field(None, description="User email address")
+    email: EmailStr = Field(..., description="User email address from OAuth provider")
+    display_name: str = Field(..., description="Display name from OAuth provider")
+    avatar_url: Optional[str] = Field(None, description="Avatar URL from OAuth provider")
+    provider: OAuthProvider = Field(..., description="OAuth provider used to authenticate")
+    provider_id: str = Field(..., description="Stable user ID from the OAuth provider")
+    role: UserRole = Field(UserRole.read_only, description="User role")
+    status: UserStatus = Field(UserStatus.pending, description="Account approval status")
+    created_at: datetime = Field(..., description="Account creation timestamp")
+    last_login: datetime = Field(..., description="Last login timestamp")
 
 
-class UserCreate(UserBase):
-    """
-    Model for creating a new user.
-    """
+class UserResponse(MongoModel):
+    """Model for user responses (excludes sensitive internal fields)."""
 
-    password: str = Field(
-        ..., min_length=8, description="User password (will be hashed)"
-    )
-
-    @field_validator("username")
-    def validate_username(cls, v: str) -> str:
-        """Validate username format."""
-        if len(v) < 3:
-            raise ValueError("Username must be at least 3 characters long")
-        if not re.match(r"^[a-zA-Z0-9_-]+$", v):
-            raise ValueError(
-                "Username can only contain letters, numbers, underscores, and hyphens"
-            )
-        return v
-
-    @field_validator("password")
-    def validate_password(cls, v: str) -> str:
-        """Validate password strength."""
-        if len(v) < 8:
-            raise ValueError("Password must be at least 8 characters long")
-        if not re.search(r"[A-Z]", v):
-            raise ValueError("Password must contain at least one uppercase letter")
-        if not re.search(r"[a-z]", v):
-            raise ValueError("Password must contain at least one lowercase letter")
-        if not re.search(r"\d", v):
-            raise ValueError("Password must contain at least one digit")
-        return v
-
-
-class UserUpdate(MongoModel):
-    """
-    Model for updating an existing user.
-    """
-
-    username: Optional[str] = None
-    email: Optional[EmailStr] = None
-    password: Optional[str] = None
-
-
-class UserInDB(UserBase):
-    """
-    Model for user as stored in database.
-    """
-
-    password_hash: str = Field(..., description="Hashed password")
-
-
-class UserResponse(UserBase):
-    """
-    Model for user responses.
-    Excludes sensitive information like password hash.
-    """
-
-    pass
+    email: EmailStr = Field(..., description="User email address")
+    display_name: str = Field(..., description="Display name")
+    avatar_url: Optional[str] = Field(None, description="Avatar URL")
+    role: UserRole = Field(..., description="User role")
+    status: UserStatus = Field(..., description="Account approval status")

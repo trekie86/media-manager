@@ -2,7 +2,11 @@ import { writable, get } from 'svelte/store';
 import { setTokenGetter } from '$lib/api/client';
 
 export interface AuthUser {
-	username: string;
+	email: string;
+	display_name: string;
+	avatar_url?: string;
+	role: 'admin' | 'read_only';
+	status: 'pending' | 'approved';
 }
 
 interface AuthState {
@@ -29,7 +33,7 @@ function createAuthStore() {
 			}
 		},
 
-		login(token: string, user: AuthUser) {
+		login(token: string, user: AuthUser | null) {
 			localStorage.setItem(TOKEN_KEY, token);
 			set({ token, user });
 		},
@@ -49,6 +53,10 @@ function createAuthStore() {
 
 		isAuthenticated(): boolean {
 			return get({ subscribe }).token !== null;
+		},
+
+		isAdmin(): boolean {
+			return get({ subscribe }).user?.role === 'admin';
 		}
 	};
 }

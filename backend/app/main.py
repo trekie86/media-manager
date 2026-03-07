@@ -7,6 +7,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.middleware.trustedhost import TrustedHostMiddleware
 from fastapi.middleware.httpsredirect import HTTPSRedirectMiddleware
+from starlette.middleware.sessions import SessionMiddleware
 
 from app.core.config import settings
 from app.db import connect_to_mongo, close_mongo_connection
@@ -213,6 +214,10 @@ app = FastAPI(
         f"{route.tags[0]}-{route.name}" if route.tags else route.name
     ),
 )
+
+# SessionMiddleware is required by Authlib for OAuth state parameter storage
+# Must be added before CORS (Starlette applies middleware in reverse insertion order)
+app.add_middleware(SessionMiddleware, secret_key=settings.SECRET_KEY)
 
 # Add CORS middleware
 app.add_middleware(

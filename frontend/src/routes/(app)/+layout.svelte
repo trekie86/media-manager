@@ -3,8 +3,7 @@
 	import { page } from '$app/stores';
 	import { onMount } from 'svelte';
 	import { auth } from '$lib/stores/auth';
-	import { logout } from '$lib/api/auth';
-	import { getMe } from '$lib/api/auth';
+	import { logout, getMe } from '$lib/api/auth';
 
 	let { children } = $props();
 	let searchQuery = $state('');
@@ -20,7 +19,7 @@
 		if (!$auth.user) {
 			try {
 				const user = await getMe();
-				auth.setUser({ username: user.username });
+				auth.setUser(user);
 			} catch {
 				auth.logout();
 				goto('/login');
@@ -75,6 +74,19 @@
 					{item.label}
 				</a>
 			{/each}
+
+			{#if $auth.user?.role === 'admin'}
+				<a
+					href="/admin"
+					class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors
+						{$page.url.pathname.startsWith('/admin')
+							? 'bg-primary-500 text-white'
+							: 'text-surface-700 dark:text-surface-300 hover:bg-surface-200 dark:hover:bg-surface-800'}"
+				>
+					<span class="text-base">🔑</span>
+					Admin
+				</a>
+			{/if}
 		</nav>
 
 		<!-- User section -->
@@ -84,10 +96,18 @@
 					onclick={() => (userMenuOpen = !userMenuOpen)}
 					class="w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm text-surface-700 dark:text-surface-300 hover:bg-surface-200 dark:hover:bg-surface-800 transition-colors"
 				>
-					<div class="w-8 h-8 rounded-full bg-primary-500 flex items-center justify-center text-white font-medium text-sm flex-shrink-0">
-						{$auth.user?.username?.[0]?.toUpperCase() ?? '?'}
-					</div>
-					<span class="truncate">{$auth.user?.username ?? 'Loading…'}</span>
+					{#if $auth.user?.avatar_url}
+						<img
+							src={$auth.user.avatar_url}
+							alt="avatar"
+							class="w-8 h-8 rounded-full flex-shrink-0 object-cover"
+						/>
+					{:else}
+						<div class="w-8 h-8 rounded-full bg-primary-500 flex items-center justify-center text-white font-medium text-sm flex-shrink-0">
+							{$auth.user?.display_name?.[0]?.toUpperCase() ?? '?'}
+						</div>
+					{/if}
+					<span class="truncate">{$auth.user?.display_name ?? 'Loading…'}</span>
 					<span class="ml-auto text-xs">▾</span>
 				</button>
 

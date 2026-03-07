@@ -38,9 +38,9 @@ async def sample_movie_data(sample_storage):
     }
 
 
-async def test_create_movie_success(client, sample_movie_data, test_db):
+async def test_create_movie_success(admin_client, sample_movie_data, test_db):
     """Test successful movie creation."""
-    response = await client.post("/api/movies/", json=sample_movie_data)
+    response = await admin_client.post("/api/movies/", json=sample_movie_data)
     
     assert response.status_code == 201
     data = response.json()
@@ -63,25 +63,25 @@ async def test_create_movie_success(client, sample_movie_data, test_db):
     assert db_movie["title"] == sample_movie_data["title"]
 
 
-async def test_create_movie_invalid_storage_id(client, sample_movie_data):
+async def test_create_movie_invalid_storage_id(admin_client, sample_movie_data):
     """Test movie creation with invalid storage ID."""
     sample_movie_data["storage_id"] = "invalid_id"
-    response = await client.post("/api/movies/", json=sample_movie_data)
+    response = await admin_client.post("/api/movies/", json=sample_movie_data)
     
     assert response.status_code == 400
     assert "Invalid storage_id format" in response.json()["detail"]
 
 
-async def test_create_movie_nonexistent_storage(client, sample_movie_data):
+async def test_create_movie_nonexistent_storage(admin_client, sample_movie_data):
     """Test movie creation with non-existent storage ID."""
     sample_movie_data["storage_id"] = str(ObjectId())
-    response = await client.post("/api/movies/", json=sample_movie_data)
+    response = await admin_client.post("/api/movies/", json=sample_movie_data)
     
     assert response.status_code == 404
     assert "Storage location not found" in response.json()["detail"]
 
 
-async def test_create_movie_minimal_data(client, sample_storage):
+async def test_create_movie_minimal_data(admin_client, sample_storage):
     """Test movie creation with minimal required data."""
     minimal_data = {
         "title": "Minimal Movie",
@@ -90,7 +90,7 @@ async def test_create_movie_minimal_data(client, sample_storage):
         "storage_id": sample_storage
     }
     
-    response = await client.post("/api/movies/", json=minimal_data)
+    response = await admin_client.post("/api/movies/", json=minimal_data)
     
     if response.status_code != 201:
         print(f"Error response: {response.status_code}")
@@ -105,15 +105,15 @@ async def test_create_movie_minimal_data(client, sample_storage):
     assert data["cover_image"] is None
 
 
-async def test_list_movies_empty(client):
+async def test_list_movies_empty(admin_client):
     """Test listing movies when none exist."""
-    response = await client.get("/api/movies/")
+    response = await admin_client.get("/api/movies/")
     
     assert response.status_code == 200
     assert response.json() == []
 
 
-async def test_list_movies_with_data(client, test_db, sample_storage):
+async def test_list_movies_with_data(admin_client, test_db, sample_storage):
     """Test listing movies with existing data."""
     # Create test movies
     movies = [
@@ -136,7 +136,7 @@ async def test_list_movies_with_data(client, test_db, sample_storage):
     for movie in movies:
         await test_db.movies.insert_one(movie)
     
-    response = await client.get("/api/movies/")
+    response = await admin_client.get("/api/movies/")
     
     assert response.status_code == 200
     data = response.json()
@@ -145,7 +145,7 @@ async def test_list_movies_with_data(client, test_db, sample_storage):
     assert all("title" in movie for movie in data)
 
 
-async def test_list_movies_with_pagination(client, test_db, sample_storage):
+async def test_list_movies_with_pagination(admin_client, test_db, sample_storage):
     """Test movie listing with pagination."""
     # Create multiple test movies
     movies = []
@@ -160,14 +160,14 @@ async def test_list_movies_with_pagination(client, test_db, sample_storage):
         movies.append(result.inserted_id)
     
     # Test pagination
-    response = await client.get("/api/movies/?skip=2&limit=2")
+    response = await admin_client.get("/api/movies/?skip=2&limit=2")
     
     assert response.status_code == 200
     data = response.json()
     assert len(data) == 2
 
 
-async def test_list_movies_filter_by_storage(client, test_db):
+async def test_list_movies_filter_by_storage(admin_client, test_db):
     """Test filtering movies by storage location."""
     # Create two storage locations
     storage1_result = await test_db.storage.insert_one({
@@ -195,7 +195,7 @@ async def test_list_movies_filter_by_storage(client, test_db):
     })
     
     # Filter by storage1
-    response = await client.get(f"/api/movies/?storage_id={str(storage1_id)}")
+    response = await admin_client.get(f"/api/movies/?storage_id={str(storage1_id)}")
     
     assert response.status_code == 200
     data = response.json()
@@ -203,7 +203,7 @@ async def test_list_movies_filter_by_storage(client, test_db):
     assert data[0]["title"] == "Movie in Storage 1"
 
 
-async def test_list_movies_filter_by_format(client, test_db, sample_storage):
+async def test_list_movies_filter_by_format(admin_client, test_db, sample_storage):
     """Test filtering movies by format."""
     # Create movies with different formats
     movies = [
@@ -215,7 +215,7 @@ async def test_list_movies_filter_by_format(client, test_db, sample_storage):
         await test_db.movies.insert_one(movie)
     
     # Filter by DVD format
-    response = await client.get("/api/movies/?format=DVD")
+    response = await admin_client.get("/api/movies/?format=DVD")
     
     assert response.status_code == 200
     data = response.json()
@@ -223,7 +223,7 @@ async def test_list_movies_filter_by_format(client, test_db, sample_storage):
     assert data[0]["title"] == "DVD Movie"
 
 
-async def test_list_movies_filter_by_genre(client, test_db, sample_storage):
+async def test_list_movies_filter_by_genre(admin_client, test_db, sample_storage):
     """Test filtering movies by genre."""
     # Create movies with different genres
     movies = [
@@ -235,7 +235,7 @@ async def test_list_movies_filter_by_genre(client, test_db, sample_storage):
         await test_db.movies.insert_one(movie)
     
     # Filter by Action genre
-    response = await client.get("/api/movies/?genre_id=28")
+    response = await admin_client.get("/api/movies/?genre_id=28")
     
     assert response.status_code == 200
     data = response.json()
@@ -243,7 +243,7 @@ async def test_list_movies_filter_by_genre(client, test_db, sample_storage):
     assert data[0]["title"] == "Action Movie"
 
 
-async def test_get_movie_success(client, test_db, sample_storage):
+async def test_get_movie_success(admin_client, test_db, sample_storage):
     """Test successful movie retrieval."""
     # Create a test movie
     movie_data = {
@@ -256,7 +256,7 @@ async def test_get_movie_success(client, test_db, sample_storage):
     result = await test_db.movies.insert_one(movie_data)
     movie_id = str(result.inserted_id)
     
-    response = await client.get(f"/api/movies/{movie_id}")
+    response = await admin_client.get(f"/api/movies/{movie_id}")
     
     assert response.status_code == 200
     data = response.json()
@@ -265,24 +265,24 @@ async def test_get_movie_success(client, test_db, sample_storage):
     assert data["tmdb_id"] == 123
 
 
-async def test_get_movie_not_found(client):
+async def test_get_movie_not_found(admin_client):
     """Test retrieving non-existent movie."""
     movie_id = str(ObjectId())
-    response = await client.get(f"/api/movies/{movie_id}")
+    response = await admin_client.get(f"/api/movies/{movie_id}")
     
     assert response.status_code == 404
     assert "Movie not found" in response.json()["detail"]
 
 
-async def test_get_movie_invalid_id(client):
+async def test_get_movie_invalid_id(admin_client):
     """Test retrieving movie with invalid ID format."""
-    response = await client.get("/api/movies/invalid_id")
+    response = await admin_client.get("/api/movies/invalid_id")
     
     assert response.status_code == 400
     assert "Invalid movie ID format" in response.json()["detail"]
 
 
-async def test_update_movie_success(client, test_db, sample_storage):
+async def test_update_movie_success(admin_client, test_db, sample_storage):
     """Test successful movie update."""
     # Create a test movie
     movie_data = {
@@ -301,7 +301,7 @@ async def test_update_movie_success(client, test_db, sample_storage):
         "tmdb_id": 456
     }
     
-    response = await client.put(f"/api/movies/{movie_id}", json=update_data)
+    response = await admin_client.put(f"/api/movies/{movie_id}", json=update_data)
     
     assert response.status_code == 200
     data = response.json()
@@ -311,7 +311,7 @@ async def test_update_movie_success(client, test_db, sample_storage):
     assert data["format"] == "DVD"  # Unchanged field
 
 
-async def test_update_movie_clear_genres(client, test_db, sample_storage):
+async def test_update_movie_clear_genres(admin_client, test_db, sample_storage):
     """Test that updating a movie with an empty genre list clears all genres."""
     # Create a movie with genres
     movie_data = {
@@ -325,14 +325,14 @@ async def test_update_movie_clear_genres(client, test_db, sample_storage):
     movie_id = str(result.inserted_id)
 
     # Clear all genres by sending an empty list
-    response = await client.put(f"/api/movies/{movie_id}", json={"genre_ids": []})
+    response = await admin_client.put(f"/api/movies/{movie_id}", json={"genre_ids": []})
 
     assert response.status_code == 200
     data = response.json()
     assert data["genre_ids"] == [] or data["genre_ids"] is None
 
 
-async def test_update_movie_storage_location(client, test_db):
+async def test_update_movie_storage_location(admin_client, test_db):
     """Test updating movie storage location."""
     # Create two storage locations
     storage1_result = await test_db.storage.insert_one({
@@ -357,14 +357,14 @@ async def test_update_movie_storage_location(client, test_db):
     
     # Move to storage2
     update_data = {"storage_id": storage2_id}
-    response = await client.put(f"/api/movies/{movie_id}", json=update_data)
+    response = await admin_client.put(f"/api/movies/{movie_id}", json=update_data)
     
     assert response.status_code == 200
     data = response.json()
     assert data["storage_id"] == storage2_id
 
 
-async def test_update_movie_invalid_storage(client, test_db, sample_storage):
+async def test_update_movie_invalid_storage(admin_client, test_db, sample_storage):
     """Test updating movie with invalid storage ID."""
     # Create a test movie
     movie_data = {
@@ -378,24 +378,24 @@ async def test_update_movie_invalid_storage(client, test_db, sample_storage):
     
     # Try to update with non-existent storage
     update_data = {"storage_id": str(ObjectId())}
-    response = await client.put(f"/api/movies/{movie_id}", json=update_data)
+    response = await admin_client.put(f"/api/movies/{movie_id}", json=update_data)
     
     assert response.status_code == 404
     assert "Storage location not found" in response.json()["detail"]
 
 
-async def test_update_movie_not_found(client):
+async def test_update_movie_not_found(admin_client):
     """Test updating non-existent movie."""
     movie_id = str(ObjectId())
     update_data = {"title": "New Title"}
     
-    response = await client.put(f"/api/movies/{movie_id}", json=update_data)
+    response = await admin_client.put(f"/api/movies/{movie_id}", json=update_data)
     
     assert response.status_code == 404
     assert "Movie not found" in response.json()["detail"]
 
 
-async def test_update_movie_no_fields(client, test_db, sample_storage):
+async def test_update_movie_no_fields(admin_client, test_db, sample_storage):
     """Test updating movie with no valid fields."""
     # Create a test movie
     movie_data = {
@@ -408,13 +408,13 @@ async def test_update_movie_no_fields(client, test_db, sample_storage):
     movie_id = str(result.inserted_id)
     
     # Try to update with empty data
-    response = await client.put(f"/api/movies/{movie_id}", json={})
+    response = await admin_client.put(f"/api/movies/{movie_id}", json={})
     
     assert response.status_code == 400
     assert "No valid fields to update" in response.json()["detail"]
 
 
-async def test_delete_movie_success(client, test_db, sample_storage):
+async def test_delete_movie_success(admin_client, test_db, sample_storage):
     """Test successful movie deletion."""
     # Create a test movie
     movie_data = {
@@ -426,7 +426,7 @@ async def test_delete_movie_success(client, test_db, sample_storage):
     result = await test_db.movies.insert_one(movie_data)
     movie_id = str(result.inserted_id)
     
-    response = await client.delete(f"/api/movies/{movie_id}")
+    response = await admin_client.delete(f"/api/movies/{movie_id}")
     
     assert response.status_code == 204
     
@@ -435,18 +435,18 @@ async def test_delete_movie_success(client, test_db, sample_storage):
     assert db_movie is None
 
 
-async def test_delete_movie_not_found(client):
+async def test_delete_movie_not_found(admin_client):
     """Test deleting non-existent movie."""
     movie_id = str(ObjectId())
-    response = await client.delete(f"/api/movies/{movie_id}")
+    response = await admin_client.delete(f"/api/movies/{movie_id}")
     
     assert response.status_code == 404
     assert "Movie not found" in response.json()["detail"]
 
 
-async def test_delete_movie_invalid_id(client):
+async def test_delete_movie_invalid_id(admin_client):
     """Test deleting movie with invalid ID format."""
-    response = await client.delete("/api/movies/invalid_id")
+    response = await admin_client.delete("/api/movies/invalid_id")
 
     assert response.status_code == 400
     assert "Invalid movie ID format" in response.json()["detail"]
@@ -454,7 +454,7 @@ async def test_delete_movie_invalid_id(client):
 
 # ── TMDB auto-enrichment tests ─────────────────────────────────────────────
 
-async def test_create_movie_auto_enriches_from_tmdb(client, sample_storage, mock_tmdb_service):
+async def test_create_movie_auto_enriches_from_tmdb(admin_client, sample_storage, mock_tmdb_service):
     """Movie with tmdb_id and no genre/runtime/cover gets auto-enriched from TMDB."""
     mock_tmdb_service.get_movie_details = AsyncMock(return_value={
         "genre_ids": [28, 878],
@@ -469,7 +469,7 @@ async def test_create_movie_auto_enriches_from_tmdb(client, sample_storage, mock
         "storage_id": sample_storage,
         "tmdb_id": 603
     }
-    response = await client.post("/api/movies/", json=payload)
+    response = await admin_client.post("/api/movies/", json=payload)
 
     assert response.status_code == 201
     data = response.json()
@@ -479,7 +479,7 @@ async def test_create_movie_auto_enriches_from_tmdb(client, sample_storage, mock
     mock_tmdb_service.get_movie_details.assert_called_once_with(603)
 
 
-async def test_create_movie_tmdb_does_not_overwrite_manual_fields(client, sample_storage, mock_tmdb_service):
+async def test_create_movie_tmdb_does_not_overwrite_manual_fields(admin_client, sample_storage, mock_tmdb_service):
     """Manually supplied fields are preserved even when TMDB returns data."""
     mock_tmdb_service.get_movie_details = AsyncMock(return_value={
         "genre_ids": [28, 878],
@@ -497,7 +497,7 @@ async def test_create_movie_tmdb_does_not_overwrite_manual_fields(client, sample
         "runtime": 200,
         "cover_image": "https://manual.example.com/poster.jpg"
     }
-    response = await client.post("/api/movies/", json=payload)
+    response = await admin_client.post("/api/movies/", json=payload)
 
     assert response.status_code == 201
     data = response.json()
@@ -509,7 +509,7 @@ async def test_create_movie_tmdb_does_not_overwrite_manual_fields(client, sample
     mock_tmdb_service.get_movie_details.assert_not_called()
 
 
-async def test_create_movie_succeeds_when_tmdb_fails(client, sample_storage, mock_tmdb_service):
+async def test_create_movie_succeeds_when_tmdb_fails(admin_client, sample_storage, mock_tmdb_service):
     """Movie creation succeeds gracefully even when TMDB raises an exception."""
     mock_tmdb_service.get_movie_details = AsyncMock(side_effect=Exception("TMDB API down"))
 
@@ -520,7 +520,7 @@ async def test_create_movie_succeeds_when_tmdb_fails(client, sample_storage, moc
         "storage_id": sample_storage,
         "tmdb_id": 603
     }
-    response = await client.post("/api/movies/", json=payload)
+    response = await admin_client.post("/api/movies/", json=payload)
 
     assert response.status_code == 201
     data = response.json()
@@ -531,7 +531,7 @@ async def test_create_movie_succeeds_when_tmdb_fails(client, sample_storage, moc
     assert data["cover_image"] is None
 
 
-async def test_create_movie_without_tmdb_id_skips_enrichment(client, sample_storage, mock_tmdb_service):
+async def test_create_movie_without_tmdb_id_skips_enrichment(admin_client, sample_storage, mock_tmdb_service):
     """TMDB is never called when no tmdb_id is provided."""
     payload = {
         "title": "Minimal Movie",
@@ -539,13 +539,13 @@ async def test_create_movie_without_tmdb_id_skips_enrichment(client, sample_stor
         "format": MediaFormat.DVD.value,
         "storage_id": sample_storage
     }
-    response = await client.post("/api/movies/", json=payload)
+    response = await admin_client.post("/api/movies/", json=payload)
 
     assert response.status_code == 201
     mock_tmdb_service.get_movie_details.assert_not_called()
 
 
-async def test_create_movie_all_fields_set_skips_tmdb(client, sample_storage, mock_tmdb_service):
+async def test_create_movie_all_fields_set_skips_tmdb(admin_client, sample_storage, mock_tmdb_service):
     """TMDB is not called when genre, runtime, and cover_image are all already provided."""
     payload = {
         "title": "The Matrix",
@@ -557,7 +557,7 @@ async def test_create_movie_all_fields_set_skips_tmdb(client, sample_storage, mo
         "runtime": 136,
         "cover_image": "https://example.com/poster.jpg"
     }
-    response = await client.post("/api/movies/", json=payload)
+    response = await admin_client.post("/api/movies/", json=payload)
 
     assert response.status_code == 201
     mock_tmdb_service.get_movie_details.assert_not_called()

@@ -6,27 +6,27 @@ export interface TokenResponse {
 }
 
 export interface UserResponse {
+	email: string;
+	display_name: string;
+	avatar_url?: string;
+	role: 'admin' | 'read_only';
+	status: 'pending' | 'approved';
+}
+
+export interface PendingUser {
 	id: string;
-	username: string;
-	email?: string;
+	email: string;
+	display_name: string;
+	provider: string;
+	status: string;
 }
 
-export async function login(username: string, password: string): Promise<TokenResponse> {
-	return request<TokenResponse>('/api/auth/login', {
-		method: 'POST',
-		body: JSON.stringify({ username, password })
-	});
+export function getGoogleLoginUrl(): string {
+	return `/api/auth/google/login`;
 }
 
-export async function register(
-	username: string,
-	password: string,
-	email?: string
-): Promise<UserResponse> {
-	return request<UserResponse>('/api/auth/register', {
-		method: 'POST',
-		body: JSON.stringify({ username, password, email })
-	});
+export function getGithubLoginUrl(): string {
+	return `/api/auth/github/login`;
 }
 
 export async function getMe(): Promise<UserResponse> {
@@ -37,6 +37,14 @@ export async function logout(): Promise<void> {
 	return request<void>('/api/auth/logout', { method: 'POST' });
 }
 
-export async function refreshToken(): Promise<TokenResponse> {
-	return request<TokenResponse>('/api/auth/refresh', { method: 'POST' });
+export async function listPendingUsers(): Promise<PendingUser[]> {
+	return request<PendingUser[]>('/api/auth/users/pending');
+}
+
+export async function approveUser(userId: string): Promise<UserResponse> {
+	return request<UserResponse>(`/api/auth/users/${userId}/approve`, { method: 'POST' });
+}
+
+export async function rejectUser(userId: string): Promise<void> {
+	return request<void>(`/api/auth/users/${userId}/reject`, { method: 'POST' });
 }

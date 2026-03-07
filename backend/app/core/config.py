@@ -78,6 +78,30 @@ class Settings(BaseSettings):
     ALGORITHM: str = "HS256"  # JWT signing algorithm
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 60 * 24  # 24 hours
 
+    # OAuth - Google
+    GOOGLE_CLIENT_ID: str = ""
+    GOOGLE_CLIENT_SECRET: str = ""
+
+    # OAuth - GitHub
+    GITHUB_CLIENT_ID: str = ""
+    GITHUB_CLIENT_SECRET: str = ""
+
+    # URLs for OAuth redirect construction and frontend handoff
+    FRONTEND_URL: str = "http://localhost:5173"
+    BACKEND_URL: str = "http://localhost:8000"
+
+    # Bootstrap admins: comma-separated emails, auto-approved as admin on first login
+    ADMIN_EMAILS: Union[str, List[str]] = []
+
+    @field_validator("ADMIN_EMAILS", mode="before")
+    @classmethod
+    def parse_admin_emails(cls, v: Union[str, List[str]]) -> List[str]:
+        if isinstance(v, str):
+            if not v.strip():
+                return []
+            return [email.strip() for email in v.split(",") if email.strip()]
+        return v
+
     @property
     def mongodb_url(self) -> str:
         """
@@ -105,6 +129,10 @@ def get_settings() -> Settings:
         settings.MONGO_PASSWORD = "test_password"
         settings.MONGO_DB = "media_manager_test"
         settings.TMDB_API_KEY = "test_key"
+        settings.GOOGLE_CLIENT_ID = "test_google_client_id"
+        settings.GOOGLE_CLIENT_SECRET = "test_google_client_secret"
+        settings.GITHUB_CLIENT_ID = "test_github_client_id"
+        settings.GITHUB_CLIENT_SECRET = "test_github_client_secret"
 
     return settings
 

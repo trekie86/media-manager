@@ -6,15 +6,21 @@ from bson import ObjectId
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from pymongo.errors import DuplicateKeyError
 
+from app.core.deps import require_approved, require_admin
 from app.db.connection import get_database
 from app.models.storage import StorageResponse, StorageUpdate, StorageTreeResponse
+from app.models.user import UserInDB
 
 # Setup router
 router = APIRouter()
 
 
 @router.post("", response_model=StorageResponse, status_code=status.HTTP_201_CREATED)
-async def create_storage(storage_data_input: dict, db=Depends(get_database)):
+async def create_storage(
+    storage_data_input: dict,
+    db=Depends(get_database),
+    _: UserInDB = Depends(require_admin),
+):
     """Create a new storage location."""
     # Check if name already exists
     if await db.storage.find_one({"name": storage_data_input["name"]}):
@@ -95,6 +101,7 @@ async def list_storage(
     skip: int = Query(0, ge=0),
     limit: int = Query(100, ge=1, le=1000),
     db=Depends(get_database),
+    _: UserInDB = Depends(require_approved),
 ):
     """List storage locations with optional filtering."""
     # Build query
@@ -131,7 +138,11 @@ async def list_storage(
 
 
 @router.get("/{storage_id}", response_model=StorageResponse)
-async def get_storage(storage_id: str, db=Depends(get_database)):
+async def get_storage(
+    storage_id: str,
+    db=Depends(get_database),
+    _: UserInDB = Depends(require_approved),
+):
     """Get a specific storage location by ID."""
     try:
         storage = await db.storage.find_one({"_id": ObjectId(storage_id)})
@@ -207,7 +218,11 @@ async def get_storage(storage_id: str, db=Depends(get_database)):
 
 
 @router.get("/{storage_id}/tree", response_model=StorageTreeResponse)
-async def get_storage_tree(storage_id: str, db=Depends(get_database)):
+async def get_storage_tree(
+    storage_id: str,
+    db=Depends(get_database),
+    _: UserInDB = Depends(require_approved),
+):
     """Get a storage location with its full tree (ancestors and descendants)."""
     try:
         storage_oid = ObjectId(storage_id)
@@ -341,7 +356,10 @@ async def get_storage_tree(storage_id: str, db=Depends(get_database)):
 
 @router.put("/{storage_id}", response_model=StorageResponse)
 async def update_storage(
-    storage_id: str, storage_data: StorageUpdate, db=Depends(get_database)
+    storage_id: str,
+    storage_data: StorageUpdate,
+    db=Depends(get_database),
+    _: UserInDB = Depends(require_admin),
 ):
     """Update a storage location."""
     try:
@@ -445,7 +463,11 @@ async def update_storage(
 
 
 @router.delete("/{storage_id}", status_code=status.HTTP_204_NO_CONTENT)
-async def delete_storage(storage_id: str, db=Depends(get_database)):
+async def delete_storage(
+    storage_id: str,
+    db=Depends(get_database),
+    _: UserInDB = Depends(require_admin),
+):
     """Delete a storage location."""
     try:
         storage_oid = ObjectId(storage_id)
