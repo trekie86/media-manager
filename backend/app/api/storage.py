@@ -222,6 +222,7 @@ async def get_storage_tree(storage_id: str, db=Depends(get_database)):
 
         # Get ancestors
         ancestors = []
+        ancestors_list = []
         if storage.get("path"):
             ancestor_ids = [
                 ObjectId(p) if isinstance(p, str) else p
@@ -231,7 +232,6 @@ async def get_storage_tree(storage_id: str, db=Depends(get_database)):
             ancestors = await ancestors_cursor.to_list(length=100)
 
             # Convert ancestor ObjectIds to strings for response
-            ancestors_list = []
             for ancestor in ancestors:
                 ancestor_dict = {
                     "id": str(ancestor["_id"]),

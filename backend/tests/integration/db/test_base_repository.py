@@ -41,18 +41,14 @@ class TestFindOne:
 
 class TestFindMany:
     async def test_returns_all_matching_documents(self, repo):
-        await repo.collection.insert_many(
-            [{"cat": "a"}, {"cat": "a"}, {"cat": "b"}]
-        )
+        await repo.collection.insert_many([{"cat": "a"}, {"cat": "a"}, {"cat": "b"}])
 
         results = await repo.find_many({"cat": "a"})
 
         assert len(results) == 2
 
     async def test_skip_offsets_results(self, repo):
-        await repo.collection.insert_many(
-            [{"seq": 1}, {"seq": 2}, {"seq": 3}]
-        )
+        await repo.collection.insert_many([{"seq": 1}, {"seq": 2}, {"seq": 3}])
 
         results = await repo.find_many({}, skip=1, limit=10)
 
@@ -66,9 +62,7 @@ class TestFindMany:
         assert len(results) == 3
 
     async def test_sort_orders_results(self, repo):
-        await repo.collection.insert_many(
-            [{"val": 3}, {"val": 1}, {"val": 2}]
-        )
+        await repo.collection.insert_many([{"val": 3}, {"val": 1}, {"val": 2}])
 
         results = await repo.find_many({}, sort=[("val", 1)])
 
@@ -171,7 +165,9 @@ class TestDeleteOne:
 
 class TestDeleteMany:
     async def test_deletes_all_matching_documents(self, repo):
-        await repo.collection.insert_many([{"tag": "batch"}, {"tag": "batch"}, {"tag": "keep"}])
+        await repo.collection.insert_many(
+            [{"tag": "batch"}, {"tag": "batch"}, {"tag": "keep"}]
+        )
 
         result = await repo.delete_many({"tag": "batch"})
 

@@ -116,7 +116,9 @@ class TestSearchMoviesEndpoint:
         assert "The Matrix" in titles
         assert "Matrix Reloaded" not in titles
 
-    async def test_search_with_storage_filter(self, client, three_movies, sample_storage):
+    async def test_search_with_storage_filter(
+        self, client, three_movies, sample_storage
+    ):
         """storage_id filter narrows results to a specific storage location."""
         # Create a second cabinet and a movie inside it
         response = await client.get(
@@ -147,9 +149,7 @@ class TestSearchMoviesEndpoint:
         assert len(skipped_data) == max(0, len(all_data) - 1)
 
     async def test_search_pagination_limit(self, client, three_movies):
-        response = await client.get(
-            "/api/movies/search", params={"q": "a", "limit": 1}
-        )
+        response = await client.get("/api/movies/search", params={"q": "a", "limit": 1})
         assert response.status_code == 200
         assert len(response.json()) <= 1
 
@@ -169,7 +169,9 @@ class TestSearchTmdbEndpoint:
             }
         )
 
-        response = await client.get("/api/movies/tmdb/search", params={"q": "The Matrix"})
+        response = await client.get(
+            "/api/movies/tmdb/search", params={"q": "The Matrix"}
+        )
 
         assert response.status_code == 200
         data = response.json()
@@ -194,9 +196,7 @@ class TestSearchTmdbEndpoint:
             return_value={"results": [], "total_results": 0, "total_pages": 0}
         )
 
-        await client.get(
-            "/api/movies/tmdb/search", params={"q": "Matrix", "page": 2}
-        )
+        await client.get("/api/movies/tmdb/search", params={"q": "Matrix", "page": 2})
 
         mock_tmdb_service.search_movies.assert_called_once_with(
             "Matrix", year=None, page=2
@@ -290,9 +290,7 @@ class TestEnrichMovieEndpoint:
             }
         )
 
-        response = await client.post(
-            f"/api/movies/{movie_without_enrichment}/enrich"
-        )
+        response = await client.post(f"/api/movies/{movie_without_enrichment}/enrich")
 
         assert response.status_code == 200
         data = response.json()
@@ -316,9 +314,7 @@ class TestEnrichMovieEndpoint:
             side_effect=lambda d: d  # pass-through; no enrichment
         )
 
-        response = await client.post(
-            f"/api/movies/{movie_without_enrichment}/enrich"
-        )
+        response = await client.post(f"/api/movies/{movie_without_enrichment}/enrich")
 
         assert response.status_code == 200
         data = response.json()

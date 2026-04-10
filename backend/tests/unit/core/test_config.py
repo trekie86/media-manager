@@ -61,7 +61,9 @@ class TestValidateSecretKey:
         assert s.SECRET_KEY == "short"
 
     def test_default_key_accepted_in_development(self):
-        s = Settings(**_BASE, ENVIRONMENT="development", SECRET_KEY="change_me_in_production")
+        s = Settings(
+            **_BASE, ENVIRONMENT="development", SECRET_KEY="change_me_in_production"
+        )
         assert s.SECRET_KEY == "change_me_in_production"
 
     def test_production_rejects_default_key(self):
@@ -105,7 +107,9 @@ class TestMongodbUrl:
         assert s.mongodb_url == expected
 
     def test_url_uses_custom_port(self):
-        s = Settings(**_BASE, MONGO_HOST="localhost", MONGO_PORT=27018, MONGO_DB="testdb")
+        s = Settings(
+            **_BASE, MONGO_HOST="localhost", MONGO_PORT=27018, MONGO_DB="testdb"
+        )
         assert "27018" in s.mongodb_url
 
     def test_url_uses_custom_db_name(self):

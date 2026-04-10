@@ -6,8 +6,6 @@ import httpx
 
 from app.services.tmdb import TMDBService, TMDBServiceManager
 
-pytestmark = pytest.mark.asyncio
-
 TEST_API_KEY = "test_api_key_unit"
 
 
@@ -66,6 +64,7 @@ def _make_response(json_data):
     return mock_resp
 
 
+@pytest.mark.asyncio
 class TestSearchMovies:
     async def test_success_returns_results_with_image_urls(self, tmdb_service):
         """Successful search injects poster_url and backdrop_url into results."""
@@ -172,6 +171,7 @@ class TestSearchMovies:
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.asyncio
 class TestGetMovieDetails:
     async def test_success_enriches_genres_and_images(self, tmdb_service):
         """get_movie_details extracts genre lists and builds image URLs."""
@@ -253,6 +253,7 @@ class TestGetMovieDetails:
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.asyncio
 class TestEnrichMovieData:
     async def test_enriches_missing_genre_ids_runtime_cover(self, tmdb_service):
         """enrich_movie_data fills in missing genre_ids, runtime, and cover_image."""
@@ -358,6 +359,7 @@ class TestEnrichMovieData:
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.asyncio
 class TestSingletonManager:
     async def test_initialize_creates_and_returns_instance(self):
         instance = await TMDBServiceManager.initialize(api_key=TEST_API_KEY)

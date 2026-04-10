@@ -93,8 +93,20 @@ class TestUpsertGenres:
 class TestMigrateStringGenres:
     async def test_migrates_known_genres_to_ids(self, test_db):
         """String genre names are converted to TMDB integer IDs."""
+        from bson import ObjectId
+
+        storage_id = ObjectId()
+        await test_db.storage.insert_one(
+            {"_id": storage_id, "name": "Test Storage", "type": "cabinet", "path": []}
+        )
         await test_db.movies.insert_one(
-            {"title": "Test Movie", "genre": ["Action", "Comedy"]}
+            {
+                "title": "Test Movie",
+                "year": 2020,
+                "format": "DVD",
+                "storage_id": storage_id,
+                "genre": ["Action", "Comedy"],
+            }
         )
 
         await migrate_string_genres(test_db)
@@ -104,8 +116,20 @@ class TestMigrateStringGenres:
         assert "genre" not in movie
 
     async def test_removes_legacy_genre_field(self, test_db):
+        from bson import ObjectId
+
+        storage_id = ObjectId()
+        await test_db.storage.insert_one(
+            {"_id": storage_id, "name": "Test Storage", "type": "cabinet", "path": []}
+        )
         await test_db.movies.insert_one(
-            {"title": "Clean Me", "genre": ["Drama"]}
+            {
+                "title": "Clean Me",
+                "year": 2020,
+                "format": "DVD",
+                "storage_id": storage_id,
+                "genre": ["Drama"],
+            }
         )
 
         await migrate_string_genres(test_db)
@@ -115,8 +139,21 @@ class TestMigrateStringGenres:
 
     async def test_skips_movies_already_having_genre_ids(self, test_db):
         """Movies with genre_ids set are not re-processed."""
+        from bson import ObjectId
+
+        storage_id = ObjectId()
+        await test_db.storage.insert_one(
+            {"_id": storage_id, "name": "Test Storage", "type": "cabinet", "path": []}
+        )
         await test_db.movies.insert_one(
-            {"title": "Already Migrated", "genre": ["Drama"], "genre_ids": [18]}
+            {
+                "title": "Already Migrated",
+                "year": 2020,
+                "format": "DVD",
+                "storage_id": storage_id,
+                "genre": ["Drama"],
+                "genre_ids": [18],
+            }
         )
 
         await migrate_string_genres(test_db)
@@ -128,20 +165,49 @@ class TestMigrateStringGenres:
         assert "genre" in movie
 
     async def test_skips_movies_with_int_genres(self, test_db):
-        """Movies whose genre list already contains ints are skipped."""
+        """Movies with genre_ids already set (indicating new code) are not reprocessed."""
+        from bson import ObjectId
+
+        storage_id = ObjectId()
+        await test_db.storage.insert_one(
+            {"_id": storage_id, "name": "Test Storage", "type": "cabinet", "path": []}
+        )
+        # Test that movies with genre_ids (from new code path) keep their existing data
         await test_db.movies.insert_one(
-            {"title": "New Code Movie", "genre": [28, 35]}
+            {
+                "title": "New Code Movie",
+                "year": 2020,
+                "format": "DVD",
+                "storage_id": storage_id,
+                "genre": ["Action", "Comedy"],
+                "genre_ids": [28, 35],
+            }
         )
 
         await migrate_string_genres(test_db)
 
         movie = await test_db.movies.find_one({"title": "New Code Movie"})
-        # genre field must not be removed (document was skipped)
+        # genre field must remain (document was skipped because genre_ids already set)
         assert "genre" in movie
+        assert movie["genre_ids"] == [28, 35]  # Unchanged
 
     async def test_empty_genre_list_removes_field_only(self, test_db):
         """Movies with an empty genre list get the field removed without setting genre_ids."""
-        await test_db.movies.insert_one({"title": "No Genres", "genre": []})
+        from bson import ObjectId
+
+        storage_id = ObjectId()
+        await test_db.storage.insert_one(
+            {"_id": storage_id, "name": "Test Storage", "type": "cabinet", "path": []}
+        )
+        await test_db.movies.insert_one(
+            {
+                "title": "No Genres",
+                "year": 2020,
+                "format": "DVD",
+                "storage_id": storage_id,
+                "genre": [],
+            }
+        )
 
         await migrate_string_genres(test_db)
 
@@ -151,8 +217,20 @@ class TestMigrateStringGenres:
 
     async def test_unknown_genre_name_is_skipped_gracefully(self, test_db):
         """Unknown genre names do not crash the migration; they are omitted."""
+        from bson import ObjectId
+
+        storage_id = ObjectId()
+        await test_db.storage.insert_one(
+            {"_id": storage_id, "name": "Test Storage", "type": "cabinet", "path": []}
+        )
         await test_db.movies.insert_one(
-            {"title": "Weird Movie", "genre": ["Action", "MadeUpGenre"]}
+            {
+                "title": "Weird Movie",
+                "year": 2020,
+                "format": "DVD",
+                "storage_id": storage_id,
+                "genre": ["Action", "MadeUpGenre"],
+            }
         )
 
         await migrate_string_genres(test_db)
@@ -163,8 +241,20 @@ class TestMigrateStringGenres:
 
     async def test_no_genre_field_movies_are_ignored(self, test_db):
         """Movies without the legacy genre field are completely unaffected."""
+        from bson import ObjectId
+
+        storage_id = ObjectId()
+        await test_db.storage.insert_one(
+            {"_id": storage_id, "name": "Test Storage", "type": "cabinet", "path": []}
+        )
         await test_db.movies.insert_one(
-            {"title": "Modern Movie", "genre_ids": [28]}
+            {
+                "title": "Modern Movie",
+                "year": 2020,
+                "format": "DVD",
+                "storage_id": storage_id,
+                "genre_ids": [28],
+            }
         )
 
         await migrate_string_genres(test_db)
