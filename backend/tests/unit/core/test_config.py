@@ -123,7 +123,8 @@ class TestMongodbUrl:
 
 
 class TestDefaultValues:
-    def test_default_environment_is_development(self):
+    def test_default_environment_is_development(self, monkeypatch):
+        monkeypatch.delenv("ENVIRONMENT", raising=False)
         s = Settings(**_BASE)
         assert s.ENVIRONMENT == "development"
 
@@ -131,7 +132,8 @@ class TestDefaultValues:
         s = Settings(**_BASE)
         assert s.ALGORITHM == "HS256"
 
-    def test_default_host_is_mongodb(self):
+    def test_default_host_is_mongodb(self, monkeypatch):
+        monkeypatch.delenv("MONGO_HOST", raising=False)
         s = Settings(**_BASE)
         assert s.MONGO_HOST == "mongodb"
 
