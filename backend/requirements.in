@@ -1,5 +1,6 @@
 # FastAPI and ASGI server
 fastapi>=0.104.1
+starlette==1.0.1
 uvicorn[standard]>=0.24.0
 
 # MongoDB
