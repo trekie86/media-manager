@@ -38,7 +38,7 @@ async def test_register_user_duplicate_username(client):
     user_data = {
         "username": "testuser2",
         "email": "test2@example.com",
-        "password": "SecurePass123",
+        "password": "SecurePass123"
     }
 
     # Create first user
@@ -90,7 +90,7 @@ async def test_login_success(client):
     user_data = {
         "username": "logintest",
         "email": "login@example.com",
-        "password": "SecurePass123",
+        "password": "SecurePass123"
     }
     response = await client.post("/api/auth/register", json=user_data)
     assert response.status_code == status.HTTP_201_CREATED
