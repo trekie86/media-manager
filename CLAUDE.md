@@ -78,6 +78,37 @@ memory-bank/
 
 ## Development Commands
 
+### One-Command Dev Script (preferred)
+
+`scripts/dev.ps1` (Windows/PowerShell) and `scripts/dev.sh` (bash) are the single entry point for configuring, building, testing and running the whole app. Both take the same commands. Prefer them over the individual commands below.
+
+```powershell
+.\scripts\dev.ps1 all        # fresh machine: setup -> build -> test
+.\scripts\dev.ps1 run        # daily use: MongoDB + backend (:8000) + frontend (:3000)
+```
+
+```bash
+./scripts/dev.sh all         # same commands on Unix/macOS/Git Bash
+```
+
+| Command | What it does |
+|---------|--------------|
+| `all` | `setup` + `build` + `test` |
+| `setup [-recompile]` | Checks tools (uv, node, pnpm, docker), creates `.env` from `.env.example`, syncs it to `backend/.env` (forcing `MONGO_HOST=localhost`), creates `backend/.venv`, installs deps (`-recompile` re-resolves `requirements*.in`) |
+| `build` | Backend import check + frontend production build |
+| `test [all\|backend\|frontend] [pytest args]` | Starts MongoDB in Docker if needed, then runs tests. Extra args go to pytest, e.g. `test backend tests/unit -x` or `test backend -k storage`. Frontend has no test script yet, so it runs `svelte-check` |
+| `run [all\|backend\|frontend\|docker]` | `all` (default) runs MongoDB + backend + frontend, Ctrl+C stops both; `docker` runs the full stack in compose |
+| `db [up\|down\|logs]` | Manage the MongoDB + mongo-express containers |
+| `lint` / `format` | flake8 + black (backend), svelte-check (frontend) / black |
+| `clients` | Regenerate OpenAPI clients (backend must be running on :8000) |
+| `clean` | Remove build output and caches (keeps `.venv` and `node_modules`) |
+| `doctor` | Check prerequisites only |
+
+Run with no arguments for the full help. Notes:
+- The root `.env` keeps the Docker value `MONGO_HOST=mongodb`; the script writes a `localhost` copy to `backend/.env` for host-run backend and tests. Edit the root `.env`, then re-run `setup`.
+- Docker Desktop must be running for `test` and `run` (MongoDB runs in a container).
+- When adding a new workflow step (new service, new build artifact), add it to both `dev.ps1` and `dev.sh`.
+
 ### Backend Development
 
 ```bash
@@ -435,3 +466,17 @@ From `productContext.md`:
 - Always activate virtual environment before backend development
 - Client generation requires backend server running on port 8000
 - **Memory Bank**: If using Cline, keep `activeContext.md` and `progress.md` updated as the source of truth
+
+## Agent skills
+
+### Issue tracker
+
+Issues live in GitHub Issues (trekie86/media-manager), via the `gh` CLI. See `docs/agents/issue-tracker.md`.
+
+### Triage labels
+
+Default vocabulary: needs-triage, needs-info, ready-for-agent, ready-for-human, wontfix. See `docs/agents/triage-labels.md`.
+
+### Domain docs
+
+Single-context: root `GLOSSARY.md` + `docs/adr/`. See `docs/agents/domain.md`.

@@ -4,3 +4,7 @@ packages:
 
 onlyBuiltDependencies:
   - esbuild
+
+# pnpm >= 10.26 / 12 use allowBuilds (onlyBuiltDependencies above is for older pnpm)
+allowBuilds:
+  esbuild: true
