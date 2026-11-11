@@ -52,14 +52,14 @@ class MovieUpdate(MongoModel):
     """
 
     title: Optional[str] = None
-    year: Optional[int] = None
+    year: Optional[int] = Field(None, description="Release year", ge=1900, le=2100)
     format: Optional[MediaFormat] = None
     storage_id: Optional[str] = Field(
         None, description="ID of the storage location (cabinet, shelf, bin, etc.)"
     )
     tmdb_id: Optional[int] = None
     genre_ids: Optional[List[int]] = None
-    runtime: Optional[int] = None
+    runtime: Optional[int] = Field(None, description="Movie runtime in minutes", ge=0)
     cover_image: Optional[str] = None
 
 

@@ -1,4 +1,5 @@
 """Integration tests for genre routes."""
+
 import pytest
 
 pytestmark = pytest.mark.asyncio
@@ -7,11 +8,13 @@ pytestmark = pytest.mark.asyncio
 async def test_list_genres_returns_seeded_list(client, test_db):
     """GET /api/genres/ returns all seeded TMDB genres sorted by name."""
     # Seed a few genres directly
-    await test_db.genres.insert_many([
-        {"id": 28, "name": "Action"},
-        {"id": 35, "name": "Comedy"},
-        {"id": 18, "name": "Drama"},
-    ])
+    await test_db.genres.insert_many(
+        [
+            {"id": 28, "name": "Action"},
+            {"id": 35, "name": "Comedy"},
+            {"id": 18, "name": "Drama"},
+        ]
+    )
 
     response = await client.get("/api/genres/")
 
@@ -41,11 +44,13 @@ async def test_list_genres_empty(client):
 
 async def test_list_genres_sorted_alphabetically(client, test_db):
     """Genres are returned in alphabetical order by name."""
-    await test_db.genres.insert_many([
-        {"id": 37, "name": "Western"},
-        {"id": 28, "name": "Action"},
-        {"id": 53, "name": "Thriller"},
-    ])
+    await test_db.genres.insert_many(
+        [
+            {"id": 37, "name": "Western"},
+            {"id": 28, "name": "Action"},
+            {"id": 53, "name": "Thriller"},
+        ]
+    )
 
     response = await client.get("/api/genres/")
 
