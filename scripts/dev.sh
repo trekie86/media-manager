@@ -35,6 +35,8 @@ Workflows
 Run
   run [target]        target: all (default: db + backend + frontend) | backend |
                       frontend | docker (full stack in docker compose)
+  stop [target]       target: all (default: backend + frontend + db) | backend |
+                      frontend | db   (kills the process trees, frees :8000 / :3000)
   db [up|down|logs]   manage the MongoDB + mongo-express containers (default: up)
 
 Quality / tooling
@@ -172,9 +174,40 @@ cmd_run() {
       trap 'kill 0 2>/dev/null || true' INT TERM EXIT
       (cd "$BACKEND" && "$VENV_PY" -m uvicorn app.main:app --reload --host 0.0.0.0 --port 8000) &
       (cd "$ROOT" && pnpm --filter frontend dev) &
-      wait -n
+      wait   # wait for BOTH, so `stop frontend` leaves the backend running
       ;;
     *) fail "Unknown run target '$1' (use all|backend|frontend|docker)" ;;
+  esac
+}
+
+# Kill a dev server: whatever listens on $2 (port), plus processes whose command line matches $3.
+stop_server() {
+  local name="$1" port="$2" pattern="$3" pids=""
+  if has lsof; then pids="$(lsof -ti "tcp:$port" -sTCP:LISTEN 2>/dev/null || true)"
+  elif has fuser; then pids="$(fuser "$port/tcp" 2>/dev/null || true)"; fi
+  pids="$pids $(pgrep -f "$pattern" 2>/dev/null || true)"
+  pids="$(printf '%s\n' $pids | grep -E '^[0-9]+$' | grep -vx "$$" | sort -u | tr '\n' ' ')"
+  if [ -z "${pids// /}" ]; then info "$name is not running"; return; fi
+  info "Stopping $name (pid ${pids% })"
+  # shellcheck disable=SC2086
+  kill $pids 2>/dev/null || true; sleep 1
+  # shellcheck disable=SC2086
+  kill -9 $pids 2>/dev/null || true
+  ok "$name stopped"
+}
+
+stop_db() {
+  has docker && docker info >/dev/null 2>&1 || { info "Docker is not running; nothing to stop for db"; return 0; }
+  (cd "$ROOT" && docker compose stop mongodb mongo-express)
+}
+
+cmd_stop() {
+  case "${1:-all}" in
+    backend)  stop_server backend 8000 'uvicorn app.main:app' ;;
+    frontend) stop_server frontend 3000 "$ROOT.*(vite|svelte-kit)" ;;
+    db)       stop_db ;;
+    all)      stop_server backend 8000 'uvicorn app.main:app'; stop_server frontend 3000 "$ROOT.*(vite|svelte-kit)"; stop_db ;;
+    *)        fail "Unknown stop target '$1' (use all|backend|frontend|db)" ;;
   esac
 }
 
@@ -199,6 +232,7 @@ case "$cmd" in
   test)    cmd_test "$@" ;;
   run)     cmd_run "$@" ;;
   db)      cmd_db "$@" ;;
+  stop)    cmd_stop "$@" ;;
   lint)    cmd_lint ;;
   format)  cmd_format ;;
   clients) cmd_clients ;;

@@ -53,6 +53,8 @@ Workflows
 Run
   run [target]        target: all (default: db + backend + frontend) | backend |
                       frontend | docker (full stack in docker compose)
+  stop [target]       target: all (default: backend + frontend + db) | backend |
+                      frontend | db   (kills the process trees, frees :8000 / :3000)
   db [up|down|logs]   manage the MongoDB + mongo-express containers (default: up)
 
 Quality / tooling
@@ -224,17 +226,63 @@ function Cmd-Run {
             Info "Backend  http://localhost:8000  (docs: /docs)"
             Info "Frontend http://localhost:3000"
             Info "Press Ctrl+C to stop both"
-            $be = Start-Process -FilePath $VenvPython -WorkingDirectory $Backend -NoNewWindow -PassThru `
-                -ArgumentList "-m", "uvicorn", "app.main:app", "--reload", "--host", "0.0.0.0", "--port", "8000"
-            $fe = Start-Process -FilePath "pnpm.cmd" -WorkingDirectory $Root -NoNewWindow -PassThru `
-                -ArgumentList "--filter", "frontend", "dev"
-            try { Wait-Process -Id $be.Id, $fe.Id -Any }
+            $pnpm = (Get-Command pnpm).Source   # may be pnpm.exe, pnpm.cmd or a shim depending on install
+            $be = $null; $fe = $null
+            try {
+                $be = Start-Process -FilePath $VenvPython -WorkingDirectory $Backend -NoNewWindow -PassThru `
+                    -ArgumentList "-m", "uvicorn", "app.main:app", "--reload", "--host", "0.0.0.0", "--port", "8000"
+                $fe = Start-Process -FilePath $pnpm -WorkingDirectory $Root -NoNewWindow -PassThru `
+                    -ArgumentList "--filter", "frontend", "dev"
+                Wait-Process -Id $be.Id, $fe.Id   # wait for BOTH, so `stop frontend` leaves the backend running
+            }
             finally {
                 foreach ($p in $be, $fe) { if ($p -and -not $p.HasExited) { taskkill /PID $p.Id /T /F *> $null } }
             }
         }
         default { Fail "Unknown run target '$target' (use all|backend|frontend|docker)" }
     }
+}
+
+# ------------------------------------------------------------------------ stop
+# Kill a dev server: whatever listens on $Port, plus any process whose command line matches
+# $Pattern (catches the uvicorn --reload parent, which can outlive the listener).
+function Stop-DevServer([string]$Name, [int]$Port, [string]$Pattern) {
+    $ids = @()
+    $ids += Get-NetTCPConnection -LocalPort $Port -State Listen -ErrorAction SilentlyContinue | ForEach-Object { $_.OwningProcess }
+    $ids += Get-CimInstance Win32_Process -ErrorAction SilentlyContinue |
+        Where-Object { $_.ProcessId -ne $PID -and $_.CommandLine -match $Pattern } | ForEach-Object { $_.ProcessId }
+    $ids = $ids | Where-Object { $_ -and $_ -ne 0 } | Select-Object -Unique
+    if (-not $ids) { Info "$Name is not running"; return }
+    foreach ($id in $ids) {
+        $proc = Get-Process -Id $id -ErrorAction SilentlyContinue
+        if ($proc) { Info "Stopping $Name (pid $id, $($proc.ProcessName))"; taskkill /PID $id /T /F *> $null }
+    }
+    Start-Sleep -Milliseconds 500
+    if (Get-NetTCPConnection -LocalPort $Port -State Listen -ErrorAction SilentlyContinue) { Warn "${Name}: port $Port is still in use" }
+    else { Ok "$Name stopped (port $Port free)" }
+}
+
+function Cmd-Stop {
+    $target = if ($Rest.Count -gt 0) { $Rest[0] } else { "all" }
+    $root = [regex]::Escape($Root)
+    switch ($target) {
+        "backend" { Stop-DevServer "backend" 8000 'uvicorn app\.main:app' }
+        "frontend" { Stop-DevServer "frontend" 3000 "$root.*(vite|svelte-kit)|(vite|svelte-kit).*$root" }
+        "db" { Cmd-Db-Stop }
+        "all" {
+            Stop-DevServer "backend" 8000 'uvicorn app\.main:app'
+            Stop-DevServer "frontend" 3000 "$root.*(vite|svelte-kit)|(vite|svelte-kit).*$root"
+            Cmd-Db-Stop
+        }
+        default { Fail "Unknown stop target '$target' (use all|backend|frontend|db)" }
+    }
+}
+
+function Cmd-Db-Stop {
+    if (-not (Has docker)) { return }
+    docker info *> $null
+    if ($LASTEXITCODE -ne 0) { Info "Docker is not running; nothing to stop for db"; return }
+    Run $Root { docker compose stop mongodb mongo-express }
 }
 
 # ------------------------------------------------------------- clients / clean
@@ -262,6 +310,7 @@ switch ($Command.ToLower()) {
     "test" { Cmd-Test }
     "run" { Cmd-Run }
     "db" { Cmd-Db }
+    "stop" { Cmd-Stop }
     "lint" { Cmd-Lint }
     "format" { Cmd-Format }
     "clients" { Cmd-Clients }

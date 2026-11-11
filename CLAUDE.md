@@ -98,6 +98,7 @@ memory-bank/
 | `build` | Backend import check + frontend production build |
 | `test [all\|backend\|frontend] [pytest args]` | Starts MongoDB in Docker if needed, then runs tests. Extra args go to pytest, e.g. `test backend tests/unit -x` or `test backend -k storage`. Frontend has no test script yet, so it runs `svelte-check` |
 | `run [all\|backend\|frontend\|docker]` | `all` (default) runs MongoDB + backend + frontend, Ctrl+C stops both; `docker` runs the full stack in compose |
+| `stop [all\|backend\|frontend\|db]` | `all` (default) stops backend (:8000), frontend (:3000) and the MongoDB containers; or stop just one. Finds servers by port and command line, so it also cleans up orphans from a crashed `run`. Stopping one server leaves the other running |
 | `db [up\|down\|logs]` | Manage the MongoDB + mongo-express containers |
 | `lint` / `format` | flake8 + black (backend), svelte-check (frontend) / black |
 | `clients` | Regenerate OpenAPI clients (backend must be running on :8000) |
